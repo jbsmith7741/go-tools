@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 // [scheme:][//[userinfo@]host][/]path[?query][#fragment]
@@ -17,16 +18,15 @@ func Convert(v interface{}, uri string) error {
 		return err
 	}
 	values := u.Query()
-
 	if reflect.ValueOf(v).Kind() != reflect.Ptr {
-		return fmt.Errorf("")
+		return fmt.Errorf("struct must be a pointer")
 	}
 	vStruct := reflect.ValueOf(v).Elem()
 	for i := 0; i < vStruct.NumField(); i++ {
 		field := vStruct.Field(i)
-		name := field.Type().Name()
-		s := values.Get(name)
-		if s == "" { // skip fields not found
+		name := vStruct.Type().Field(i).Name
+
+		if s := values.Get(name); s == "" { // skip fields not found
 			continue
 		}
 		if err := setField(field, values.Get(name)); err != nil {
@@ -52,6 +52,20 @@ func setField(value reflect.Value, s string) error {
 			return err
 		}
 		value.SetFloat(f)
+	case reflect.Struct:
+		switch value.Interface().(type) {
+		case time.Time:
+			t, err := time.Parse(time.RFC3339Nano, s)
+			if err != nil {
+				return err
+			}
+			value.Set(reflect.ValueOf(t))
+		default:
+			return fmt.Errorf("Unsupported type %v", value.Kind())
+		}
+	case reflect.Ptr:
+		//v := reflect.New
+		fmt.Println(value.Type(), value.Interface())
 	default:
 		return fmt.Errorf("Unsupported type %v", value.Kind())
 	}
