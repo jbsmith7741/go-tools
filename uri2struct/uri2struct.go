@@ -64,8 +64,11 @@ func setField(value reflect.Value, s string) error {
 			return fmt.Errorf("Unsupported type %v", value.Kind())
 		}
 	case reflect.Ptr:
-		//v := reflect.New
-		fmt.Println(value.Type(), value.Interface())
+		// create non pointer type and recursively assign
+		z := reflect.New(value.Type().Elem())
+		setField(z.Elem(), s)
+		value.Set(z)
+
 	default:
 		return fmt.Errorf("Unsupported type %v", value.Kind())
 	}
