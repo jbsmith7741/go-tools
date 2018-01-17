@@ -10,6 +10,7 @@ import (
 type testStruct struct {
 	// basic types
 	String   string
+	Bool     bool
 	Int      int
 	IntP     *int
 	Int32    int32
@@ -21,12 +22,32 @@ type testStruct struct {
 	Float64  float64
 	Float64P *float64
 
+	// slice
+	Strings  []string
+	Ints     []int
+	IntsP    []*int
+	Ints32   []int32
+	Ints64   []int64
+	Floats32 []float32
+	Floats64 []float64
+
 	// struct
-	Time  time.Time
-	TimeP *time.Time
+	Time       time.Time
+	TimeP      *time.Time
+	Unmarshal  unmarshalStruct
+	UnmarshalP *unmarshalStruct
 
 	// alias
 	//Duration time.Duration
+}
+
+type unmarshalStruct struct {
+	Data string
+}
+
+func (s *unmarshalStruct) UnmarshalText(text []byte) error {
+	s.Data = string(text)
+	return nil
 }
 
 func TestConvert(t *testing.T) {
@@ -68,6 +89,11 @@ func TestConvert(t *testing.T) {
 			expected: testStruct{Float32P: newFloat32(12.2), Float64P: newFloat64(33.3)},
 		},
 		{
+			msg:       "invalid float",
+			uri:       "?Float32=abc",
+			shouldErr: true,
+		},
+		{
 			msg:      "time.Time",
 			uri:      "?Time=2017-10-10T12:12:12Z",
 			expected: testStruct{Time: tm},
@@ -77,6 +103,65 @@ func TestConvert(t *testing.T) {
 			uri:      "?TimeP=2017-10-10T12:12:12Z",
 			expected: testStruct{TimeP: &tm},
 		},
+		{
+			msg:       "invalid time",
+			uri:       "?Time=2017-10-",
+			shouldErr: true,
+		},
+		{
+			msg: "struct with UnMarshalText",
+			uri: "?Unmarshal=abc&UnmarshalP=def",
+			expected: testStruct{
+				Unmarshal:  unmarshalStruct{Data: "abc"},
+				UnmarshalP: &unmarshalStruct{Data: "def"},
+			},
+		},
+		{
+			msg: "bool",
+			uri: "?Bool=true",
+			expected: testStruct{
+				Bool: true,
+			},
+		},
+		{
+			msg: "bool implicit true",
+			uri: "?Bool&Test",
+			expected: testStruct{
+				Bool: true,
+			},
+		},
+		{
+			msg: "slice of string",
+			uri: "?Strings=a&Strings=b&Strings=c",
+			expected: testStruct{
+				Strings: []string{"a", "b", "c"},
+			},
+		},
+		{
+			msg: "slice: int, int32, int64",
+			uri: "?Ints=1&Ints=2&Ints=3&Ints32=4,5,6&Ints64=7,8,9",
+			expected: testStruct{
+				Ints:   []int{1, 2, 3},
+				Ints32: []int32{4, 5, 6},
+				Ints64: []int64{7, 8, 9},
+			},
+		},
+		{
+			msg: "slice: float32, float64",
+			uri: "?Floats32=1.1&Floats32=2.2&Floats32=3.3&Floats64=4.4,5.5,6.6",
+			expected: testStruct{
+				Floats32: []float32{1.1, 2.2, 3.3},
+				Floats64: []float64{4.4, 5.5, 6.6},
+			},
+		},
+		{
+			msg: "slice of *int",
+			uri: "?IntsP=1,2,3",
+			expected: testStruct{
+				IntsP: []*int{newInt(1), newInt(2), newInt(3)},
+			},
+		},
+
 		/*{
 			msg:      "Duration",
 			uri:      "?Duration=1h",
@@ -97,18 +182,29 @@ func TestConvert(t *testing.T) {
 	}
 }
 
-func newInt(i int) *int {
-	return &i
-}
-func newInt32(i int32) *int32 {
-	return &i
-}
-func newInt64(i int64) *int64 {
-	return &i
-}
-func newFloat32(f float32) *float32 {
-	return &f
-}
-func newFloat64(f float64) *float64 {
-	return &f
+func TestValidate(t *testing.T) {
+	cases := []struct {
+		msg       string
+		uri       string
+		data      interface{}
+		shouldErr bool
+	}{
+		{
+			msg:       "Cannot write to struct",
+			data:      struct{}{},
+			shouldErr: true,
+		},
+		{
+			msg:       "Invalid uri",
+			uri:       "://",
+			data:      &struct{}{},
+			shouldErr: true,
+		},
+	}
+	for _, test := range cases {
+		err := Convert(test.data, test.uri)
+		if err != nil != test.shouldErr {
+			t.Errorf(test.msg)
+		}
+	}
 }
