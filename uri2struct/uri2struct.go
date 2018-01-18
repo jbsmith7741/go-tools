@@ -9,8 +9,19 @@ import (
 	"strings"
 )
 
-// Seperator used for slices
-var Seperator = ","
+var (
+	// Seperator used for slices
+	Seperator = ","
+
+	// supported struct tags
+	uriTag = "uri"
+
+	// supported tag values
+	scheme = "scheme"
+	host   = "host"
+	path   = "path"
+	origin = "origin" // schema://host/path
+)
 
 // Convert copies a standard parsable uri to a predefined struct
 // [scheme:][//[userinfo@]host][/]path[?query][#fragment]
@@ -29,12 +40,27 @@ func Convert(v interface{}, uri string) error {
 	vStruct := reflect.ValueOf(v).Elem()
 	for i := 0; i < vStruct.NumField(); i++ {
 		field := vStruct.Field(i)
-		name := vStruct.Type().Field(i).Name
 
-		if len(values[name]) == 0 {
+		name := vStruct.Type().Field(i).Name
+		tag, found := vStruct.Type().Field(i).Tag.Lookup(uriTag)
+		if found {
+			name = tag
+			tag = strings.ToLower(tag)
+		}
+
+		data := values.Get(name)
+		if tag == scheme {
+			data = u.Scheme
+		} else if tag == host {
+			data = u.Host
+		} else if tag == path {
+			data = u.Path
+		} else if tag == origin {
+			data = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+		} else if len(values[name]) == 0 {
 			continue
 		}
-		data := values.Get(name)
+
 		if field.Kind() == reflect.Slice {
 			// TODO: should this be default behavior?
 			data = strings.Join(values[name], Seperator)
@@ -46,6 +72,10 @@ func Convert(v interface{}, uri string) error {
 	}
 	return nil
 }
+
+/* func checkStructTag(v interface) string {
+
+} */
 
 func setField(value reflect.Value, s string) error {
 	switch value.Kind() {
