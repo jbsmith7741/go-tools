@@ -196,6 +196,9 @@ type (
 	testOrigin struct {
 		Origin string `uri:"Origin"`
 	}
+	testAuthority struct {
+		Authority string `uri:"authority"`
+	}
 	testCustom struct {
 		OldInt int `uri:"NewInt"`
 		Host   string
@@ -224,9 +227,19 @@ func TestTags(t *testing.T) {
 			expected: &testPath{Path: "/usr/bin"},
 		},
 		{
+			msg:      "Authority uri tag",
+			uri:      "https://localhost:8080/usr/bin",
+			expected: &testAuthority{Authority: "https://localhost:8080"},
+		},
+		{
 			msg:      "Origin uri tag",
 			uri:      "https://localhost:8080/usr/bin",
 			expected: &testOrigin{Origin: "https://localhost:8080/usr/bin"},
+		},
+		{
+			msg:      "Origin uri tag without authority",
+			uri:      "/usr/bin",
+			expected: &testOrigin{Origin: "/usr/bin"},
 		},
 		{
 			msg:      "Custom int name",

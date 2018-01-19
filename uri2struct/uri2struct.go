@@ -17,10 +17,11 @@ var (
 	uriTag = "uri"
 
 	// supported tag values
-	scheme = "scheme"
-	host   = "host"
-	path   = "path"
-	origin = "origin" // schema://host/path
+	scheme    = "scheme"
+	host      = "host"
+	path      = "path"
+	authority = "authority" // scheme://host
+	origin    = "origin"    // scheme://host/path
 )
 
 // Convert copies a standard parsable uri to a predefined struct
@@ -49,16 +50,24 @@ func Convert(v interface{}, uri string) error {
 		}
 
 		data := values.Get(name)
-		if tag == scheme {
+		switch tag {
+		case scheme:
 			data = u.Scheme
-		} else if tag == host {
+		case host:
 			data = u.Host
-		} else if tag == path {
+		case path:
 			data = u.Path
-		} else if tag == origin {
+		case origin:
 			data = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
-		} else if len(values[name]) == 0 {
-			continue
+			if u.Scheme == "" && u.Host == "" {
+				data = u.Path
+			}
+		case authority:
+			data = fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+		default:
+			if len(values[name]) == 0 {
+				continue
+			}
 		}
 
 		if field.Kind() == reflect.Slice {
