@@ -1,6 +1,7 @@
 package uri2struct
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -39,6 +40,7 @@ type testStruct struct {
 
 	// alias
 	//Duration time.Duration
+
 }
 
 type unmarshalStruct struct {
@@ -161,14 +163,13 @@ func TestConvert(t *testing.T) {
 				IntsP: []*int{newInt(1), newInt(2), newInt(3)},
 			},
 		},
-
 		/*{
 			msg:      "Duration",
 			uri:      "?Duration=1h",
 			expected: testStruct{Duration: time.Hour},
 		},*/
-	}
 
+	}
 	for _, test := range cases {
 		var d testStruct
 		err := Convert(&d, test.uri)
@@ -176,6 +177,86 @@ func TestConvert(t *testing.T) {
 			t.Errorf("FAIL: %v error mismatch %v", test.msg, err)
 		} else if !test.shouldErr && !cmp.Equal(d, test.expected) {
 			t.Errorf("FAIL: %v values did not match %s", test.msg, cmp.Diff(d, test.expected))
+		} else {
+			t.Logf("PASS: %v", test.msg)
+		}
+	}
+}
+
+type (
+	testScheme struct {
+		Schema string `uri:"scheme"`
+	}
+	testHost struct {
+		Host string `uri:"host"`
+	}
+	testPath struct {
+		Path string `uri:"path"`
+	}
+	testOrigin struct {
+		Origin string `uri:"Origin"`
+	}
+	testAuthority struct {
+		Authority string `uri:"authority"`
+	}
+	testCustom struct {
+		OldInt int `uri:"NewInt"`
+		Host   string
+	}
+)
+
+func TestTags(t *testing.T) {
+	cases := []struct {
+		msg      string
+		uri      string
+		expected interface{}
+	}{
+		{
+			msg:      "Scheme uri tag",
+			uri:      "https://localhost:8080/usr/bin",
+			expected: &testScheme{Schema: "https"},
+		},
+		{
+			msg:      "Host uri tag",
+			uri:      "https://localhost:8080/usr/bin",
+			expected: &testHost{Host: "localhost:8080"},
+		},
+		{
+			msg:      "Path uri tag",
+			uri:      "https://localhost:8080/usr/bin",
+			expected: &testPath{Path: "/usr/bin"},
+		},
+		{
+			msg:      "Authority uri tag",
+			uri:      "https://localhost:8080/usr/bin",
+			expected: &testAuthority{Authority: "https://localhost:8080"},
+		},
+		{
+			msg:      "Origin uri tag",
+			uri:      "https://localhost:8080/usr/bin",
+			expected: &testOrigin{Origin: "https://localhost:8080/usr/bin"},
+		},
+		{
+			msg:      "Origin uri tag without authority",
+			uri:      "/usr/bin",
+			expected: &testOrigin{Origin: "/usr/bin"},
+		},
+		{
+			msg:      "Custom int name",
+			uri:      "?NewInt=10",
+			expected: &testCustom{OldInt: 10},
+		},
+		{
+			msg:      "Var named Host without tag",
+			uri:      "https://local/usr/bin?Host=hello",
+			expected: &testCustom{Host: "hello"},
+		},
+	}
+	for _, test := range cases {
+		v := reflect.New(reflect.TypeOf(test.expected).Elem()).Interface()
+		Convert(v, test.uri)
+		if !cmp.Equal(v, test.expected) {
+			t.Errorf("FAIL: %v values did not match %s", test.msg, cmp.Diff(v, test.expected))
 		} else {
 			t.Logf("PASS: %v", test.msg)
 		}
