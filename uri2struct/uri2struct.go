@@ -43,8 +43,8 @@ func Convert(v interface{}, uri string) error {
 		field := vStruct.Field(i)
 
 		name := vStruct.Type().Field(i).Name
-		tag, found := vStruct.Type().Field(i).Tag.Lookup(uriTag)
-		if found {
+		tag := vStruct.Type().Field(i).Tag.Get(uriTag)
+		if tag != "" {
 			name = tag
 			tag = strings.ToLower(tag)
 		}

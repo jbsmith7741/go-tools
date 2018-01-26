@@ -36,12 +36,12 @@ func TestAdd(t *testing.T) {
 					"err1": errData{
 						err:   fmt.Errorf("err1"),
 						count: 1,
-						t:     time.Now(),
+						t:     time.Now().Add(time.Second),
 					},
 					"err3": errData{
 						err:   fmt.Errorf("err3"),
 						count: 2,
-						t:     time.Now(),
+						t:     time.Now().Add(time.Second),
 					},
 				},
 			}),
@@ -64,7 +64,7 @@ func TestAdd(t *testing.T) {
 			aErr.Add(err)
 		}
 		if test.isNil != (aErr.ErrOrNil() == nil) {
-			t.Errorf("FAIL: %s", test.msg)
+			t.Errorf("FAIL: %s %v", test.msg, aErr.ErrOrNil())
 		} else if !cmp.Equal(aErr.Error(), test.expected) {
 			t.Errorf("FAIL: %s %s", test.msg, cmp.Diff((aErr.Error()), test.expected))
 		} else {

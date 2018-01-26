@@ -1,6 +1,7 @@
 package appenderr
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +19,14 @@ type errData struct {
 	err   error
 	count int
 	t     time.Time
+}
+
+type timeErrs []errData
+
+func (a timeErrs) Len() int      { return len(a) }
+func (a timeErrs) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a timeErrs) Less(i, j int) bool {
+	return a[i].t.Before(a[j].t)
 }
 
 // New AppendErr
@@ -69,7 +78,7 @@ func (e *AppendErr) Error() (s string) {
 	}
 	e.mu.RUnlock()
 
-	// sort if needed
+	sort.Sort(timeErrs(errs))
 
 	for _, err := range errs {
 		if err.count > 1 {
