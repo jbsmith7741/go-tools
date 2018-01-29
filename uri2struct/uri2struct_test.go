@@ -39,8 +39,7 @@ type testStruct struct {
 	UnmarshalP *unmarshalStruct
 
 	// alias
-	//Duration time.Duration
-
+	Dessert dessert
 }
 
 type unmarshalStruct struct {
@@ -52,7 +51,7 @@ func (s *unmarshalStruct) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func TestConvert(t *testing.T) {
+func TestUnmarshal(t *testing.T) {
 	tm, _ := time.Parse(time.RFC3339, "2017-10-10T12:12:12Z")
 	cases := []struct {
 		msg       string
@@ -163,16 +162,20 @@ func TestConvert(t *testing.T) {
 				IntsP: []*int{newInt(1), newInt(2), newInt(3)},
 			},
 		},
-		/*{
-			msg:      "Duration",
-			uri:      "?Duration=1h",
-			expected: testStruct{Duration: time.Hour},
-		},*/
-
+		{
+			msg:      "alias type (dessert)",
+			uri:      "?Dessert=brownie",
+			expected: testStruct{Dessert: brownie},
+		},
+		{
+			msg:       "invalid alias type",
+			uri:       "?Dessert=cat",
+			shouldErr: true,
+		},
 	}
 	for _, test := range cases {
 		var d testStruct
-		err := Convert(&d, test.uri)
+		err := Unmarshal(&d, test.uri)
 		if err != nil != test.shouldErr {
 			t.Errorf("FAIL: %v error mismatch %v", test.msg, err)
 		} else if !test.shouldErr && !cmp.Equal(d, test.expected) {
@@ -254,7 +257,7 @@ func TestTags(t *testing.T) {
 	}
 	for _, test := range cases {
 		v := reflect.New(reflect.TypeOf(test.expected).Elem()).Interface()
-		Convert(v, test.uri)
+		Unmarshal(v, test.uri)
 		if !cmp.Equal(v, test.expected) {
 			t.Errorf("FAIL: %v values did not match %s", test.msg, cmp.Diff(v, test.expected))
 		} else {
@@ -283,7 +286,7 @@ func TestValidate(t *testing.T) {
 		},
 	}
 	for _, test := range cases {
-		err := Convert(test.data, test.uri)
+		err := Unmarshal(test.data, test.uri)
 		if err != nil != test.shouldErr {
 			t.Errorf(test.msg)
 		}
