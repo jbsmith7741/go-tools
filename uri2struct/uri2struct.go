@@ -24,10 +24,10 @@ var (
 	origin    = "origin"    // scheme://host/path
 )
 
-// Convert copies a standard parsable uri to a predefined struct
+// Unmarshal copies a standard parsable uri to a predefined struct
 // [scheme:][//[userinfo@]host][/]path[?query][#fragment]
 // scheme:opaque[?query][#fragment]
-func Convert(v interface{}, uri string) error {
+func Unmarshal(v interface{}, uri string) error {
 	u, err := url.Parse(uri)
 	if err != nil {
 		return err
@@ -75,18 +75,25 @@ func Convert(v interface{}, uri string) error {
 			data = strings.Join(values[name], Seperator)
 		}
 
-		if err := setField(field, data); err != nil {
+		if err := SetField(field, data); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-/* func checkStructTag(v interface) string {
-
-} */
-
-func setField(value reflect.Value, s string) error {
+func SetField(value reflect.Value, s string) error {
+	if isAlias(value) {
+		v := reflect.New(value.Type())
+		if implementsUnmarshaler(v) {
+			err := v.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(s))
+			if err != nil {
+				return err
+			}
+			value.Set(v.Elem())
+			return nil
+		}
+	}
 	switch value.Kind() {
 	case reflect.String:
 		value.SetString(s)
@@ -109,7 +116,7 @@ func setField(value reflect.Value, s string) error {
 	case reflect.Ptr:
 		// create non pointer type and recursively assign
 		z := reflect.New(value.Type().Elem())
-		setField(z.Elem(), s)
+		SetField(z.Elem(), s)
 		value.Set(z)
 
 	case reflect.Slice:
@@ -119,7 +126,7 @@ func setField(value reflect.Value, s string) error {
 		slice := reflect.MakeSlice(value.Type(), 0, len(data))
 		for _, v := range data {
 			baseValue := reflect.New(baseType).Elem()
-			setField(baseValue, v)
+			SetField(baseValue, v)
 			slice = reflect.Append(slice, baseValue)
 		}
 		value.Set(slice)
@@ -138,6 +145,14 @@ func setField(value reflect.Value, s string) error {
 		return fmt.Errorf("Unsupported type %v", value.Kind())
 	}
 	return nil
+}
+
+func isAlias(v reflect.Value) bool {
+	if v.Kind() == reflect.Struct || v.Kind() == reflect.Ptr {
+		return false
+	}
+	s := fmt.Sprint(v.Type())
+	return strings.Contains(s, ".")
 }
 
 func implementsUnmarshaler(v reflect.Value) bool {
