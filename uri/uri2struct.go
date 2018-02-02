@@ -1,4 +1,4 @@
-package uri2struct
+package uri
 
 import (
 	"encoding"
@@ -7,11 +7,13 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/jbsmith7741/go-tools/appenderr"
 )
 
 var (
-	// Seperator used for slices
-	Seperator = ","
+	// Separator used for slices
+	Separator = ","
 
 	// supported struct tags
 	uriTag = "uri"
@@ -39,6 +41,7 @@ func Unmarshal(v interface{}, uri string) error {
 		return fmt.Errorf("struct must be a pointer")
 	}
 	vStruct := reflect.ValueOf(v).Elem()
+	errs := appenderr.New()
 	for i := 0; i < vStruct.NumField(); i++ {
 		field := vStruct.Field(i)
 
@@ -71,17 +74,20 @@ func Unmarshal(v interface{}, uri string) error {
 		}
 
 		if field.Kind() == reflect.Slice {
-			// TODO: should this be default behavior?
-			data = strings.Join(values[name], Seperator)
+			data = strings.Join(values[name], Separator)
 		}
 
 		if err := SetField(field, data); err != nil {
-			return err
+			errs.Add(fmt.Errorf("%s can not be set to %s (%s)", data, name, field.Type()))
 		}
 	}
-	return nil
+	return errs.ErrOrNil()
 }
 
+// SetField converts the string s to the type of value and sets the value if possible.
+// Pointers and slices are recursively dealt with by deferencing the pointer
+// or creating a generic slice of type value.
+// All structs and alias' that implement encoding.TextUnmarshaler are suppported
 func SetField(value reflect.Value, s string) error {
 	if isAlias(value) {
 		v := reflect.New(value.Type())
@@ -122,7 +128,7 @@ func SetField(value reflect.Value, s string) error {
 	case reflect.Slice:
 		// create a generate slice and recursively assign the elements
 		baseType := reflect.TypeOf(value.Interface()).Elem()
-		data := strings.Split(s, Seperator)
+		data := strings.Split(s, Separator)
 		slice := reflect.MakeSlice(value.Type(), 0, len(data))
 		for _, v := range data {
 			baseValue := reflect.New(baseType).Elem()
