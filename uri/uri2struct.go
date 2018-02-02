@@ -1,4 +1,4 @@
-package uri2struct
+package uri
 
 import (
 	"encoding"

@@ -1,4 +1,4 @@
-package uri2struct
+package uri
 
 func newInt(i int) *int {
 	return &i

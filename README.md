@@ -4,7 +4,7 @@
 # go-tools
 a collection of useful go libraries
 
-## uri2struct 
+## uri
 a wrapper around url.Parse to map uri values to a struct
 
 ## appenderr
