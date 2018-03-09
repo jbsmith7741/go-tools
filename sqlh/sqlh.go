@@ -7,7 +7,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	_ "gopkg.in/DATA-DOG/go-sqlmock.v1"
 )
 
 type Config struct {
@@ -26,7 +25,7 @@ type DB struct {
 const (
 	Postgres = "postgres"
 	MySql    = "mysql"
-	Mock     = "sqlmock"
+	Mock     = "mock"
 )
 
 func Open(c Config) (*sql.DB, error) {
