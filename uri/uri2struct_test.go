@@ -1,6 +1,7 @@
 package uri
 
 import (
+	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -206,6 +207,14 @@ type (
 		OldInt int `uri:"NewInt"`
 		Host   string
 	}
+	testPrivate struct {
+		int    int    `uri:"int"`
+		String string `uri:"string"`
+	}
+	testPrivate2 struct {
+		int int
+		Int int `uri:"int"`
+	}
 )
 
 func TestTags(t *testing.T) {
@@ -284,11 +293,23 @@ func TestValidate(t *testing.T) {
 			data:      &struct{}{},
 			shouldErr: true,
 		},
+		{
+			msg:  "private variables",
+			uri:  "?string=hello&int=1",
+			data: &testPrivate{},
+		},
+		{
+			msg:  "private variables",
+			uri:  "int=1",
+			data: &testPrivate2{Int: 1},
+		},
 	}
 	for _, test := range cases {
 		err := Unmarshal(test.data, test.uri)
 		if err != nil != test.shouldErr {
 			t.Errorf(test.msg)
+		} else {
+			log.Printf("PASS: %q data: %v", test.msg, test.data)
 		}
 	}
 }
