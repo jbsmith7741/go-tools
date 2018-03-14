@@ -45,6 +45,10 @@ func Unmarshal(v interface{}, uri string) error {
 	for i := 0; i < vStruct.NumField(); i++ {
 		field := vStruct.Field(i)
 
+		if !field.CanSet() { // skip private variables
+			continue
+		}
+
 		name := vStruct.Type().Field(i).Name
 		tag := vStruct.Type().Field(i).Tag.Get(uriTag)
 		if tag != "" {

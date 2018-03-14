@@ -8,4 +8,26 @@ a collection of useful go libraries
 a wrapper around url.Parse to map uri values to a struct
 
 ## appenderr
-a thread safe way to collect a slice of errors, errors are de-duplicated and counted based on their message
+A lot of times we have functions that have multiple error checks in them. Sometimes its helpful to be able to lot at full set of errors rather than the first occurring error. AppendErr is an easy way to add multiple errors together and return the whole set in a single error interface. appenderr is thread safe and can be used to collect errors that occur in different go routines. Each error is counted (based on the string value) and displayed on it's own line.
+
+``` go
+// Checkline verifies that the line is a list of comma seperated integers.
+// It returns a list of invalid fields if any exist
+func CheckLine(line string)  error {
+    errs := appenderr.New() 
+    for _, v := range strings.Split(line, ",") {
+        _, err := strconv.Atoi(v)
+        errs.Add(err)
+    }
+    return ints, errs.ErrOrNil()
+}
+
+```
+
+## sqlh
+a sql helper class that simplifies configs and connections to databases. sqlh removes the need for anonymous imports and allows basic testing of database calls without having to worry about connecting to a real database.
+
+sqlh mock database should be used to test around database calls and not to test the calls themselves. If you need to test the database logic use [sqlmock](https://github.com/DATA-DOG/go-sqlmock)
+
+## trial
+trial is a helper to write Table Driven Tests.
