@@ -29,7 +29,7 @@ var (
 // Unmarshal copies a standard parsable uri to a predefined struct
 // [scheme:][//[userinfo@]host][/]path[?query][#fragment]
 // scheme:opaque[?query][#fragment]
-func Unmarshal(v interface{}, uri string) error {
+func Unmarshal(uri string, v interface{}) error {
 	u, err := url.Parse(uri)
 	if err != nil {
 		return err

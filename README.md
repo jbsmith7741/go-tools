@@ -5,7 +5,45 @@
 a collection of useful go libraries
 
 ## uri
-a wrapper around url.Parse to map uri values to a struct
+a convenient and easy way to unmarshal a uri to a struct.
+ 
+### keywords
+- schema
+- host
+- path
+- authority (schema:host)
+- origin (schema:host/path)
+
+
+### example
+If we have the uri "http://example.com/path/to/page?name=ferret&color=purple" we can unmarshal this to a predefined struct as follows
+``` go 
+type Example struct {
+    Schema `uri:"schema"`
+    Host `uri:"Host"`
+    Path `uri:"path"`
+    Name `uri:"name"`
+    Color `uri:"color"`
+}
+
+func() {
+e := Example{}
+
+err := uri.Unmarshal("http://example.com/path/to/page?name=ferret&color=purple", &e)
+ 
+}
+```
+this would become the following struct 
+``` go
+e := Example{
+    Schema: "www",
+    Host: "example.com",
+    Path: "path/to/page",
+    Name:"ferret",
+    Color:"purple",
+    }
+ 
+```
 
 ## appenderr
 A lot of times we have functions that have multiple error checks in them. Sometimes its helpful to be able to lot at full set of errors rather than the first occurring error. AppendErr is an easy way to add multiple errors together and return the whole set in a single error interface. appenderr is thread safe and can be used to collect errors that occur in different go routines. Each error is counted (based on the string value) and displayed on it's own line.
@@ -19,7 +57,7 @@ func CheckLine(line string)  error {
         _, err := strconv.Atoi(v)
         errs.Add(err)
     }
-    return ints, errs.ErrOrNil()
+    return errs.ErrOrNil()
 }
 
 ```
