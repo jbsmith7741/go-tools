@@ -176,7 +176,7 @@ func TestUnmarshal(t *testing.T) {
 	}
 	for _, test := range cases {
 		var d testStruct
-		err := Unmarshal(&d, test.uri)
+		err := Unmarshal(test.uri, &d)
 		if err != nil != test.shouldErr {
 			t.Errorf("FAIL: %v error mismatch %v", test.msg, err)
 		} else if !test.shouldErr && !cmp.Equal(d, test.expected) {
@@ -266,7 +266,7 @@ func TestTags(t *testing.T) {
 	}
 	for _, test := range cases {
 		v := reflect.New(reflect.TypeOf(test.expected).Elem()).Interface()
-		Unmarshal(v, test.uri)
+		Unmarshal(test.uri, v)
 		if !cmp.Equal(v, test.expected) {
 			t.Errorf("FAIL: %v values did not match %s", test.msg, cmp.Diff(v, test.expected))
 		} else {
@@ -305,7 +305,7 @@ func TestValidate(t *testing.T) {
 		},
 	}
 	for _, test := range cases {
-		err := Unmarshal(test.data, test.uri)
+		err := Unmarshal(test.uri, test.data)
 		if err != nil != test.shouldErr {
 			t.Errorf(test.msg)
 		} else {
