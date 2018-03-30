@@ -20,10 +20,10 @@ If we have the uri "http://example.com/path/to/page?name=ferret&color=purple" we
 ``` go 
 type Example struct {
     Schema `uri:"schema"`
-    Host `uri:"Host"`
-    Path `uri:"path"`
-    Name `uri:"name"`
-    Color `uri:"color"`
+    Host   `uri:"Host"`
+    Path   `uri:"path"`
+    Name   `uri:"name"`
+    Color  `uri:"color"`
 }
 
 func() {
@@ -37,10 +37,10 @@ this would become the following struct
 ``` go
 e := Example{
     Schema: "www",
-    Host: "example.com",
-    Path: "path/to/page",
-    Name:"ferret",
-    Color:"purple",
+    Host:   "example.com",
+    Path:   "path/to/page",
+    Name:   "ferret",
+    Color:  "purple",
     }
  
 ```

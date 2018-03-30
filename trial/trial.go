@@ -2,19 +2,22 @@ package trial
 
 import (
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
 type (
-	TestFn func(args ...interface{}) (interface{}, error)
+	TestFn  func(args ...interface{}) (interface{}, error)
+	DiffFn  func(interface{}, interface{}) string
+	EqualFn func(interface{}, interface{}) bool
 )
 
 type Trial struct {
-	cases  map[string]Case
-	testFn TestFn
+	cases   map[string]Case
+	testFn  TestFn
+	diffFn  DiffFn
+	equalFn EqualFn
 }
 
 func New(fn TestFn, cases map[string]Case) *Trial {
@@ -24,7 +27,23 @@ func New(fn TestFn, cases map[string]Case) *Trial {
 	return &Trial{
 		cases:  cases,
 		testFn: fn,
+		diffFn: func(i1, i2 interface{}) string {
+			return cmp.Diff(i1, i2)
+		},
+		equalFn: func(i1, i2 interface{}) bool {
+			return cmp.Equal(i1, i2)
+		},
 	}
+}
+
+func (t *Trial) EqualFn(fn EqualFn) *Trial {
+	t.equalFn = fn
+	return t
+}
+
+func (t *Trial) DiffFn(fn DiffFn) *Trial {
+	t.diffFn = fn
+	return t
 }
 
 type Case struct {
@@ -37,13 +56,14 @@ type Case struct {
 	ShouldPanic bool  // is a panic expected
 }
 
-func (t *Trial) Add(msg string, c Case) {
+/*func (t *Trial) Add(msg string, c Case) *Trial {
 	if _, found := t.cases[msg]; found {
 		// todo: considering changing to t.Fatalf (t *testing.T)
 		log.Fatalf("test case %q already exists", msg)
 	}
 	t.cases[msg] = c
-}
+	return t
+}*/
 
 func (trial *Trial) Test(t *testing.T) {
 	for msg, test := range trial.cases {
@@ -56,7 +76,7 @@ func (trial *Trial) Test(t *testing.T) {
 	}
 }
 
-func (trial *Trial) testCase(msg string, test Case) (r result) {
+func (t *Trial) testCase(msg string, test Case) (r result) {
 	var finished bool
 	defer func() {
 		rec := recover()
@@ -71,9 +91,9 @@ func (trial *Trial) testCase(msg string, test Case) (r result) {
 	var err error
 	var result interface{}
 	if inputs, ok := test.Input.([]interface{}); ok {
-		result, err = trial.testFn(inputs...)
+		result, err = t.testFn(inputs...)
 	} else {
-		result, err = trial.testFn(test.Input)
+		result, err = t.testFn(test.Input)
 	}
 
 	if test.ShouldErr && err == nil {
@@ -82,9 +102,9 @@ func (trial *Trial) testCase(msg string, test Case) (r result) {
 	} else if !test.ShouldErr && err != nil {
 		finished = true
 		return fail("FAIL: %q unexpected error %s", msg, err.Error())
-	} else if !test.ShouldErr && !cmp.Equal(result, test.Expected) {
+	} else if !test.ShouldErr && !t.equalFn(result, test.Expected) {
 		finished = true
-		return fail("FAIL: %q differences %v", msg, cmp.Diff(result, test.Expected))
+		return fail("FAIL: %q differences %v", msg, t.diffFn(result, test.Expected))
 	} else {
 		finished = true
 		return pass("PASS: %q", msg)
@@ -109,4 +129,8 @@ func fail(format string, args ...interface{}) result {
 		Success: false,
 		Message: fmt.Sprintf(format, args...),
 	}
+}
+
+func Interfaces(args ...interface{}) interface{} {
+	return args
 }
