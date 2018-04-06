@@ -1,7 +1,6 @@
 package uri
 
 import (
-	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -50,6 +49,10 @@ type unmarshalStruct struct {
 func (s *unmarshalStruct) UnmarshalText(text []byte) error {
 	s.Data = string(text)
 	return nil
+}
+
+func (s unmarshalStruct) MarshalText() ([]byte, error) {
+	return []byte(s.Data), nil
 }
 
 func TestUnmarshal(t *testing.T) {
@@ -187,6 +190,70 @@ func TestUnmarshal(t *testing.T) {
 	}
 }
 
+func TestMarshal(t *testing.T) {
+	cases := map[string]struct {
+		data     interface{}
+		expected string
+	}{
+		"default values": {
+			data: struct {
+				Int    int
+				Amount float64 `uri:"float" default:"1.1"`
+				Slice  []int   `default:"1,2,3"`
+			}{
+				Amount: 1.1,
+				Slice:  []int{1, 2, 3},
+			},
+		},
+		"slices": {
+			data: struct {
+				Ints    []int
+				Nil     []int
+				Strings []string `uri:"strings"`
+			}{
+				Ints:    []int{1, 2, 3},
+				Strings: []string{"hello", "world"},
+			},
+			expected: "?Ints=1&Ints=2&Ints=3&strings=hello&strings=world",
+		},
+		/* todo: how to handle?
+		"nil slice with default value": {
+			data: struct {
+				Floats []float64 `uri:"float" default:"3.14,2.7,7.7"`
+			}{},
+			expected: "?float=nil",
+		},*/
+		"pointers": {
+			data: struct {
+				Int     *int
+				Nil     *int
+				Default *int `default:"1"`
+			}{
+				Int: newInt(10),
+			},
+			expected: "?Default=nil&Int=10",
+		},
+		"structs": {
+			data: struct {
+				Time   time.Time       `uri:"time"`
+				Struct unmarshalStruct `uri:"struct"`
+			}{
+				Time:   mTime("2018-04-04T00:00:00Z"),
+				Struct: unmarshalStruct{Data: "data"},
+			},
+			expected: "?struct=data&time=2018-04-04T00%3A00%3A00Z",
+		},
+	}
+	for msg, test := range cases {
+		s := Marshal(test.data)
+		if !cmp.Equal(s, test.expected) {
+			t.Errorf("FAIL: %q %s", msg, cmp.Diff(s, test.expected))
+		} else {
+			t.Logf("PASS: %q", msg)
+		}
+	}
+}
+
 type (
 	testScheme struct {
 		Schema string `uri:"scheme"`
@@ -214,6 +281,23 @@ type (
 	testPrivate2 struct {
 		int int
 		Int int `uri:"int"`
+	}
+	primitiveDefault struct {
+		// basic types
+		String  string  `default:"hello"`
+		Bool    bool    `default:"true"`
+		Int     int     `default:"42"`
+		Float32 float32 `default:"12.34"`
+	}
+	sliceDefault struct {
+		Strings []string `default:"hello,world"`
+		Ints    []int    `default:"11"`
+	}
+	unmarshalDefault struct {
+		Time time.Time `default:"2018-01-01T00:00:00Z"`
+	}
+	aliasDefault struct {
+		Dessert dessert `default:"cake"`
 	}
 )
 
@@ -263,6 +347,33 @@ func TestTags(t *testing.T) {
 			uri:      "https://local/usr/bin?Host=hello",
 			expected: &testCustom{Host: "hello"},
 		},
+		{
+			msg:      "default tag for primitive types",
+			expected: &primitiveDefault{String: "hello", Bool: true, Int: 42, Float32: 12.34},
+		},
+		{
+			msg:      "override default tag for primitive types",
+			uri:      "?String=world&Bool=false&Int=0&Float32=0.1",
+			expected: &primitiveDefault{String: "world", Bool: false, Int: 0, Float32: 0.1},
+		},
+		{
+			msg:      "default tag for slices",
+			expected: &sliceDefault{Strings: []string{"hello", "world"}, Ints: []int{11}},
+		},
+		{
+			msg:      "override default tag for slices",
+			uri:      "?Strings=test&Ints=1&Ints=2&Ints=3",
+			expected: &sliceDefault{Strings: []string{"test"}, Ints: []int{1, 2, 3}},
+		},
+		{
+			msg:      "default tag unmarshalText struct",
+			expected: &unmarshalDefault{Time: mTime("2018-01-01T00:00:00Z")},
+		},
+		{
+			msg:      "override default tag unmarshalText struct",
+			uri:      "?Time=2017-04-24T12:00:00Z",
+			expected: &unmarshalDefault{Time: mTime("2017-04-24T12:00:00Z")},
+		},
 	}
 	for _, test := range cases {
 		v := reflect.New(reflect.TypeOf(test.expected).Elem()).Interface()
@@ -283,14 +394,21 @@ func TestValidate(t *testing.T) {
 		shouldErr bool
 	}{
 		{
-			msg:       "Cannot write to struct",
+			msg:       "cannot write to struct",
 			data:      struct{}{},
 			shouldErr: true,
 		},
 		{
-			msg:       "Invalid uri",
+			msg:       "invalid uri",
 			uri:       "://",
 			data:      &struct{}{},
+			shouldErr: true,
+		},
+		{
+			msg: "invalid default tag",
+			data: &struct {
+				Value int `default:"abc"`
+			}{},
 			shouldErr: true,
 		},
 		{
@@ -309,7 +427,7 @@ func TestValidate(t *testing.T) {
 		if err != nil != test.shouldErr {
 			t.Errorf(test.msg)
 		} else {
-			log.Printf("PASS: %q data: %v", test.msg, test.data)
+			t.Logf("PASS: %q data: %v", test.msg, test.data)
 		}
 	}
 }

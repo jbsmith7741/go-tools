@@ -1,5 +1,7 @@
 package uri
 
+import "time"
+
 func newInt(i int) *int {
 	return &i
 }
@@ -14,4 +16,12 @@ func newFloat32(f float32) *float32 {
 }
 func newFloat64(f float64) *float64 {
 	return &f
+}
+
+func mTime(s string) time.Time {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		panic(err)
+	}
+	return t
 }

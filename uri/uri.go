@@ -16,7 +16,8 @@ var (
 	Separator = ","
 
 	// supported struct tags
-	uriTag = "uri"
+	uriTag     = "uri"
+	defaultTag = "default"
 
 	// supported tag values
 	scheme    = "scheme"
@@ -56,6 +57,14 @@ func Unmarshal(uri string, v interface{}) error {
 			tag = strings.ToLower(tag)
 		}
 
+		// check default values
+		def := vStruct.Type().Field(i).Tag.Get(defaultTag)
+		if def != "" {
+			if err := SetField(field, def); err != nil {
+				errs.Add(fmt.Errorf("default value %s can not be set to %s (%s)", def, name, field.Type()))
+			}
+		}
+
 		data := values.Get(name)
 		switch tag {
 		case scheme:
@@ -86,6 +95,64 @@ func Unmarshal(uri string, v interface{}) error {
 		}
 	}
 	return errs.ErrOrNil()
+}
+
+func Marshal(v interface{}) (s string) {
+	var u url.URL
+	uVal := url.Values{}
+	var vStruct reflect.Value
+	if reflect.TypeOf(vStruct).Kind() == reflect.Ptr {
+		vStruct = reflect.ValueOf(v).Elem()
+	} else {
+		vStruct = reflect.ValueOf(v)
+	}
+
+	for i := 0; i < vStruct.NumField(); i++ {
+		field := vStruct.Field(i)
+
+		var name string
+		tag := vStruct.Type().Field(i).Tag.Get(uriTag)
+
+		fs := GetFieldString(field)
+		switch tag {
+		case scheme:
+			u.Scheme = fs
+			continue
+		case host:
+			u.Host = fs
+			continue
+		case path:
+			u.Path = fs
+			continue
+		case origin:
+		case authority:
+		case "":
+			name = vStruct.Type().Field(i).Name
+		default:
+			name = tag
+		}
+		def := vStruct.Type().Field(i).Tag.Get(defaultTag)
+		//fmt.Printf("%s|tag:%q,default:%q|%s|%v\n", name, tag, def, fs, field.Interface())
+		// skip default fields
+		if def == "" && isZero(field) {
+			continue
+		} else if fs == def {
+			continue
+		}
+
+		if field.Kind() == reflect.Slice {
+			for _, v := range strings.Split(fs, ",") {
+				uVal.Add(name, v)
+			}
+		} else {
+			uVal.Add(name, fs)
+		}
+	}
+
+	// Note: url values are sorted by string value as they are encoded
+	u.RawQuery = uVal.Encode()
+
+	return u.String()
 }
 
 // SetField converts the string s to the type of value and sets the value if possible.
@@ -157,6 +224,39 @@ func SetField(value reflect.Value, s string) error {
 	return nil
 }
 
+func GetFieldString(value reflect.Value) string {
+	switch value.Kind() {
+	case reflect.String:
+		return value.Interface().(string)
+	case reflect.Bool:
+		if value.Interface().(bool) == true {
+			return "true"
+		} else {
+			return "false"
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return fmt.Sprintf("%v", value.Interface())
+	case reflect.Float32, reflect.Float64:
+		return fmt.Sprintf("%v", value.Interface())
+	case reflect.Ptr:
+		if value.IsNil() {
+			return "nil"
+		}
+		return GetFieldString(value.Elem())
+	case reflect.Slice:
+		var s string
+		for i := 0; i < value.Len(); i++ {
+			s += GetFieldString(value.Index(i)) + ","
+		}
+		return strings.TrimRight(s, ",")
+	case reflect.Struct:
+		s, _ := tryMarshal(value)
+		return s
+	default:
+		return ""
+	}
+}
+
 func isAlias(v reflect.Value) bool {
 	if v.Kind() == reflect.Struct || v.Kind() == reflect.Ptr {
 		return false
@@ -167,4 +267,40 @@ func isAlias(v reflect.Value) bool {
 
 func implementsUnmarshaler(v reflect.Value) bool {
 	return v.Type().Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem())
+}
+
+func tryMarshal(v reflect.Value) (string, error) {
+	// does it implement TextMarshaler?
+	if v.Type().Implements(reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()) {
+		b, err := v.Interface().(encoding.TextMarshaler).MarshalText()
+		return string(b), err
+	} else if v.Type().Implements(reflect.TypeOf((*fmt.Stringer)(nil)).Elem()) {
+		return v.Interface().(fmt.Stringer).String(), nil
+	}
+	return "", nil
+}
+
+func isZero(v reflect.Value) bool {
+	if !v.CanInterface() {
+		return false
+	}
+	switch v.Kind() {
+	case reflect.Func, reflect.Map, reflect.Slice:
+		return v.IsNil()
+	case reflect.Array:
+		z := true
+		for i := 0; i < v.Len(); i++ {
+			z = z && isZero(v.Index(i))
+		}
+		return z
+	case reflect.Struct:
+		z := true
+		for i := 0; i < v.NumField(); i++ {
+			z = z && isZero(v.Field(i))
+		}
+		return z
+	}
+	// Compare other types directly:
+	z := reflect.Zero(v.Type())
+	return v.Interface() == z.Interface()
 }
