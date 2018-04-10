@@ -130,7 +130,3 @@ func fail(format string, args ...interface{}) result {
 		Message: fmt.Sprintf(format, args...),
 	}
 }
-
-func Interfaces(args ...interface{}) interface{} {
-	return args
-}
