@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/jbsmith7741/go-tools/trial"
 )
 
 type testStruct struct {
@@ -72,7 +73,7 @@ func TestUnmarshal(t *testing.T) {
 		},
 		"pointer: *int, *int32, *int64": {
 			uri:      "?IntP=77&Int32P=11&Int64P=222",
-			expected: testStruct{IntP: newInt(77), Int32P: newInt32(11), Int64P: newInt64(222)},
+			expected: testStruct{IntP: trial.IntP(77), Int32P: trial.Int32P(11), Int64P: trial.Int64P(222)},
 		},
 		"invalid integer": {
 			uri:       "?Int=abc",
@@ -84,7 +85,7 @@ func TestUnmarshal(t *testing.T) {
 		},
 		"pointer: *float32, *float64": {
 			uri:      "?Float32P=12.2&Float64P=33.3",
-			expected: testStruct{Float32P: newFloat32(12.2), Float64P: newFloat64(33.3)},
+			expected: testStruct{Float32P: trial.Float32P(12.2), Float64P: trial.Float64P(33.3)},
 		},
 		"invalid float": {
 			uri:       "?Float32=abc",
@@ -145,13 +146,13 @@ func TestUnmarshal(t *testing.T) {
 		"slice of *int": {
 			uri: "?IntsP=1,2,3",
 			expected: testStruct{
-				IntsP: []*int{newInt(1), newInt(2), newInt(3)},
+				IntsP: []*int{trial.IntP(1), trial.IntP(2), trial.IntP(3)},
 			},
 		},
 		"slice of *int with nil": {
 			uri: "?IntsP=1,2,nil,3",
 			expected: testStruct{
-				IntsP: []*int{newInt(1), newInt(2), nil, newInt(3)},
+				IntsP: []*int{trial.IntP(1), trial.IntP(2), nil, trial.IntP(3)},
 			},
 		},
 		"alias type (dessert)": {
@@ -293,12 +294,12 @@ func TestTags(t *testing.T) {
 		},
 		{
 			msg:      "default tag unmarshalText struct",
-			expected: &unmarshalDefault{Time: mTime("2018-01-01T00:00:00Z")},
+			expected: &unmarshalDefault{Time: trial.Time(time.RFC3339, "2018-01-01T00:00:00Z")},
 		},
 		{
 			msg:      "override default tag unmarshalText struct",
 			uri:      "?Time=2017-04-24T12:00:00Z",
-			expected: &unmarshalDefault{Time: mTime("2017-04-24T12:00:00Z")},
+			expected: &unmarshalDefault{Time: trial.Time(time.RFC3339, "2017-04-24T12:00:00Z")},
 		},
 	}
 	for _, test := range cases {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/jbsmith7741/go-tools/trial"
 )
 
 func TestMarshal(t *testing.T) {
@@ -46,7 +47,7 @@ func TestMarshal(t *testing.T) {
 				Nil     *int
 				Default *int `default:"1"`
 			}{
-				Int: newInt(10),
+				Int: trial.IntP(10),
 			},
 			expected: "?Default=nil&Int=10",
 		},
@@ -55,7 +56,7 @@ func TestMarshal(t *testing.T) {
 				Time   time.Time       `uri:"time"`
 				Struct unmarshalStruct `uri:"struct"`
 			}{
-				Time:   mTime("2018-04-04T00:00:00Z"),
+				Time:   trial.Time(time.RFC3339, "2018-04-04T00:00:00Z"),
 				Struct: unmarshalStruct{Data: "data"},
 			},
 			expected: "?struct=data&time=2018-04-04T00%3A00%3A00Z",
