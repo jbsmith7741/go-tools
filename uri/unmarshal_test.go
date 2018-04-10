@@ -57,93 +57,77 @@ func (s unmarshalStruct) MarshalText() ([]byte, error) {
 
 func TestUnmarshal(t *testing.T) {
 	tm, _ := time.Parse(time.RFC3339, "2017-10-10T12:12:12Z")
-	cases := []struct {
-		msg       string
+	cases := map[string]struct {
 		uri       string
 		shouldErr bool
 		expected  testStruct
 	}{
-		{
-			msg:      "string",
+		"string": {
 			uri:      "?String=hello",
 			expected: testStruct{String: "hello"},
 		},
-		{
-			msg:      "integer: int, int32, int64",
+		"integer: int, int32, int64": {
 			uri:      "?Int=10&Int32=32&Int64=64",
 			expected: testStruct{Int: 10, Int32: 32, Int64: 64},
 		},
-		{
-			msg:      "pointer: *int, *int32, *int64",
+		"pointer: *int, *int32, *int64": {
 			uri:      "?IntP=77&Int32P=11&Int64P=222",
 			expected: testStruct{IntP: newInt(77), Int32P: newInt32(11), Int64P: newInt64(222)},
 		},
-		{
-			msg:       "invalid integer",
+		"invalid integer": {
 			uri:       "?Int=abc",
 			shouldErr: true,
 		},
-		{
-			msg:      "float32, float64",
+		"float32, float64": {
 			uri:      "?Float32=12.2&Float64=33.3",
 			expected: testStruct{Float32: 12.2, Float64: 33.3},
 		},
-		{
-			msg:      "pointer: *float32, *float64",
+		"pointer: *float32, *float64": {
 			uri:      "?Float32P=12.2&Float64P=33.3",
 			expected: testStruct{Float32P: newFloat32(12.2), Float64P: newFloat64(33.3)},
 		},
-		{
-			msg:       "invalid float",
+		"invalid float": {
 			uri:       "?Float32=abc",
 			shouldErr: true,
 		},
-		{
-			msg:      "time.Time",
+		"time.Time": {
 			uri:      "?Time=2017-10-10T12:12:12Z",
 			expected: testStruct{Time: tm},
 		},
-		{
-			msg:      "*time.Time",
+		"*time.Time": {
 			uri:      "?TimeP=2017-10-10T12:12:12Z",
 			expected: testStruct{TimeP: &tm},
 		},
-		{
-			msg:       "invalid time",
+		"invalid time": {
 			uri:       "?Time=2017-10-",
 			shouldErr: true,
 		},
-		{
-			msg: "struct with UnMarshalText",
+		"struct with UnMarshalText": {
 			uri: "?Unmarshal=abc&UnmarshalP=def",
 			expected: testStruct{
 				Unmarshal:  unmarshalStruct{Data: "abc"},
 				UnmarshalP: &unmarshalStruct{Data: "def"},
 			},
 		},
-		{
-			msg: "bool",
+		"bool": {
 			uri: "?Bool=true",
 			expected: testStruct{
 				Bool: true,
 			},
 		},
-		{
-			msg: "bool implicit true",
+		"bool implicit true": {
 			uri: "?Bool&Test",
 			expected: testStruct{
 				Bool: true,
 			},
 		},
-		{
-			msg: "slice of string",
+		"slice of string": {
 			uri: "?Strings=a&Strings=b&Strings=c",
 			expected: testStruct{
 				Strings: []string{"a", "b", "c"},
 			},
 		},
-		{
-			msg: "slice: int, int32, int64",
+		"slice: int, int32, int64": {
 			uri: "?Ints=1&Ints=2&Ints=3&Ints32=4,5,6&Ints64=7,8,9",
 			expected: testStruct{
 				Ints:   []int{1, 2, 3},
@@ -151,105 +135,43 @@ func TestUnmarshal(t *testing.T) {
 				Ints64: []int64{7, 8, 9},
 			},
 		},
-		{
-			msg: "slice: float32, float64",
+		"slice: float32, float64": {
 			uri: "?Floats32=1.1&Floats32=2.2&Floats32=3.3&Floats64=4.4,5.5,6.6",
 			expected: testStruct{
 				Floats32: []float32{1.1, 2.2, 3.3},
 				Floats64: []float64{4.4, 5.5, 6.6},
 			},
 		},
-		{
-			msg: "slice of *int",
+		"slice of *int": {
 			uri: "?IntsP=1,2,3",
 			expected: testStruct{
 				IntsP: []*int{newInt(1), newInt(2), newInt(3)},
 			},
 		},
-		{
-			msg:      "alias type (dessert)",
+		"slice of *int with nil": {
+			uri: "?IntsP=1,2,nil,3",
+			expected: testStruct{
+				IntsP: []*int{newInt(1), newInt(2), nil, newInt(3)},
+			},
+		},
+		"alias type (dessert)": {
 			uri:      "?Dessert=brownie",
 			expected: testStruct{Dessert: brownie},
 		},
-		{
-			msg:       "invalid alias type",
+		"invalid alias type": {
 			uri:       "?Dessert=cat",
 			shouldErr: true,
 		},
 	}
-	for _, test := range cases {
+	for msg, test := range cases {
 		var d testStruct
 		err := Unmarshal(test.uri, &d)
 		if err != nil != test.shouldErr {
-			t.Errorf("FAIL: %v error mismatch %v", test.msg, err)
+			t.Errorf("FAIL: %v error mismatch %v", msg, err)
 		} else if !test.shouldErr && !cmp.Equal(d, test.expected) {
-			t.Errorf("FAIL: %v values did not match %s", test.msg, cmp.Diff(d, test.expected))
+			t.Errorf("FAIL: %v values did not match %s", msg, cmp.Diff(d, test.expected))
 		} else {
-			t.Logf("PASS: %v", test.msg)
-		}
-	}
-}
-
-func TestMarshal(t *testing.T) {
-	cases := map[string]struct {
-		data     interface{}
-		expected string
-	}{
-		"default values": {
-			data: struct {
-				Int    int
-				Amount float64 `uri:"float" default:"1.1"`
-				Slice  []int   `default:"1,2,3"`
-			}{
-				Amount: 1.1,
-				Slice:  []int{1, 2, 3},
-			},
-		},
-		"slices": {
-			data: struct {
-				Ints    []int
-				Nil     []int
-				Strings []string `uri:"strings"`
-			}{
-				Ints:    []int{1, 2, 3},
-				Strings: []string{"hello", "world"},
-			},
-			expected: "?Ints=1&Ints=2&Ints=3&strings=hello&strings=world",
-		},
-		/* todo: how to handle?
-		"nil slice with default value": {
-			data: struct {
-				Floats []float64 `uri:"float" default:"3.14,2.7,7.7"`
-			}{},
-			expected: "?float=nil",
-		},*/
-		"pointers": {
-			data: struct {
-				Int     *int
-				Nil     *int
-				Default *int `default:"1"`
-			}{
-				Int: newInt(10),
-			},
-			expected: "?Default=nil&Int=10",
-		},
-		"structs": {
-			data: struct {
-				Time   time.Time       `uri:"time"`
-				Struct unmarshalStruct `uri:"struct"`
-			}{
-				Time:   mTime("2018-04-04T00:00:00Z"),
-				Struct: unmarshalStruct{Data: "data"},
-			},
-			expected: "?struct=data&time=2018-04-04T00%3A00%3A00Z",
-		},
-	}
-	for msg, test := range cases {
-		s := Marshal(test.data)
-		if !cmp.Equal(s, test.expected) {
-			t.Errorf("FAIL: %q %s", msg, cmp.Diff(s, test.expected))
-		} else {
-			t.Logf("PASS: %q", msg)
+			t.Logf("PASS: %v", msg)
 		}
 	}
 }
@@ -263,6 +185,7 @@ type (
 	}
 	testPath struct {
 		Path string `uri:"path"`
+		File string `uri:"filename"`
 	}
 	testOrigin struct {
 		Origin string `uri:"Origin"`
@@ -318,9 +241,12 @@ func TestTags(t *testing.T) {
 			expected: &testHost{Host: "localhost:8080"},
 		},
 		{
-			msg:      "Path uri tag",
-			uri:      "https://localhost:8080/usr/bin",
-			expected: &testPath{Path: "/usr/bin"},
+			msg: "Path uri tag",
+			uri: "https://localhost:8080/usr/bin/file.txt",
+			expected: &testPath{
+				Path: "/usr/bin/file.txt",
+				File: "file.txt",
+			},
 		},
 		{
 			msg:      "Authority uri tag",
