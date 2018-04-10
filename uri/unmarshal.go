@@ -8,22 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"path/filepath"
+
 	"github.com/jbsmith7741/go-tools/appenderr"
-)
-
-var (
-	// Separator used for slices
-	Separator = ","
-
-	// supported struct tags
-	uriTag = "uri"
-
-	// supported tag values
-	scheme    = "scheme"
-	host      = "host"
-	path      = "path"
-	authority = "authority" // scheme://host
-	origin    = "origin"    // scheme://host/path
 )
 
 // Unmarshal copies a standard parsable uri to a predefined struct
@@ -56,6 +43,14 @@ func Unmarshal(uri string, v interface{}) error {
 			tag = strings.ToLower(tag)
 		}
 
+		// check default values
+		def := vStruct.Type().Field(i).Tag.Get(defaultTag)
+		if def != "" {
+			if err := SetField(field, def); err != nil {
+				errs.Add(fmt.Errorf("default value %s can not be set to %s (%s)", def, name, field.Type()))
+			}
+		}
+
 		data := values.Get(name)
 		switch tag {
 		case scheme:
@@ -64,6 +59,8 @@ func Unmarshal(uri string, v interface{}) error {
 			data = u.Host
 		case path:
 			data = u.Path
+		case filename:
+			_, data = filepath.Split(u.Path)
 		case origin:
 			data = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
 			if u.Scheme == "" && u.Host == "" {
@@ -124,9 +121,14 @@ func SetField(value reflect.Value, s string) error {
 		value.SetFloat(f)
 
 	case reflect.Ptr:
+
 		// create non pointer type and recursively assign
 		z := reflect.New(value.Type().Elem())
+		if s == "nil" {
+			return nil
+		}
 		SetField(z.Elem(), s)
+
 		value.Set(z)
 
 	case reflect.Slice:
@@ -155,16 +157,4 @@ func SetField(value reflect.Value, s string) error {
 		return fmt.Errorf("Unsupported type %v", value.Kind())
 	}
 	return nil
-}
-
-func isAlias(v reflect.Value) bool {
-	if v.Kind() == reflect.Struct || v.Kind() == reflect.Ptr {
-		return false
-	}
-	s := fmt.Sprint(v.Type())
-	return strings.Contains(s, ".")
-}
-
-func implementsUnmarshaler(v reflect.Value) bool {
-	return v.Type().Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem())
 }

@@ -45,6 +45,25 @@ e := Example{
  
 ```
 
+### example 
+
+``` golang 
+uri = http://example.org/wiki/Main_Page?Option1=10&Text=hello 
+
+type MyStruct struct {
+    Schema `uri:"scheme"`
+    Host `uri:"host"`
+    Path `uri:"path"`
+    Option1 int
+    Text string 
+}
+
+func Parse() {
+    var s *MyStruct
+    uri.Unmarshal(s, uri)
+}
+```
+
 ## appenderr
 A lot of times we have functions that have multiple error checks in them. Sometimes its helpful to be able to lot at full set of errors rather than the first occurring error. AppendErr is an easy way to add multiple errors together and return the whole set in a single error interface. appenderr is thread safe and can be used to collect errors that occur in different go routines. Each error is counted (based on the string value) and displayed on it's own line.
 

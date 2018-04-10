@@ -1,12 +1,12 @@
 package uri
 
 import (
-	"log"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/jbsmith7741/go-tools/trial"
 )
 
 type testStruct struct {
@@ -52,95 +52,83 @@ func (s *unmarshalStruct) UnmarshalText(text []byte) error {
 	return nil
 }
 
+func (s unmarshalStruct) MarshalText() ([]byte, error) {
+	return []byte(s.Data), nil
+}
+
 func TestUnmarshal(t *testing.T) {
 	tm, _ := time.Parse(time.RFC3339, "2017-10-10T12:12:12Z")
-	cases := []struct {
-		msg       string
+	cases := map[string]struct {
 		uri       string
 		shouldErr bool
 		expected  testStruct
 	}{
-		{
-			msg:      "string",
+		"string": {
 			uri:      "?String=hello",
 			expected: testStruct{String: "hello"},
 		},
-		{
-			msg:      "integer: int, int32, int64",
+		"integer: int, int32, int64": {
 			uri:      "?Int=10&Int32=32&Int64=64",
 			expected: testStruct{Int: 10, Int32: 32, Int64: 64},
 		},
-		{
-			msg:      "pointer: *int, *int32, *int64",
+		"pointer: *int, *int32, *int64": {
 			uri:      "?IntP=77&Int32P=11&Int64P=222",
-			expected: testStruct{IntP: newInt(77), Int32P: newInt32(11), Int64P: newInt64(222)},
+			expected: testStruct{IntP: trial.IntP(77), Int32P: trial.Int32P(11), Int64P: trial.Int64P(222)},
 		},
-		{
-			msg:       "invalid integer",
+		"invalid integer": {
 			uri:       "?Int=abc",
 			shouldErr: true,
 		},
-		{
-			msg:      "float32, float64",
+		"float32, float64": {
 			uri:      "?Float32=12.2&Float64=33.3",
 			expected: testStruct{Float32: 12.2, Float64: 33.3},
 		},
-		{
-			msg:      "pointer: *float32, *float64",
+		"pointer: *float32, *float64": {
 			uri:      "?Float32P=12.2&Float64P=33.3",
-			expected: testStruct{Float32P: newFloat32(12.2), Float64P: newFloat64(33.3)},
+			expected: testStruct{Float32P: trial.Float32P(12.2), Float64P: trial.Float64P(33.3)},
 		},
-		{
-			msg:       "invalid float",
+		"invalid float": {
 			uri:       "?Float32=abc",
 			shouldErr: true,
 		},
-		{
-			msg:      "time.Time",
+		"time.Time": {
 			uri:      "?Time=2017-10-10T12:12:12Z",
 			expected: testStruct{Time: tm},
 		},
-		{
-			msg:      "*time.Time",
+		"*time.Time": {
 			uri:      "?TimeP=2017-10-10T12:12:12Z",
 			expected: testStruct{TimeP: &tm},
 		},
-		{
-			msg:       "invalid time",
+		"invalid time": {
 			uri:       "?Time=2017-10-",
 			shouldErr: true,
 		},
-		{
-			msg: "struct with UnMarshalText",
+		"struct with UnMarshalText": {
 			uri: "?Unmarshal=abc&UnmarshalP=def",
 			expected: testStruct{
 				Unmarshal:  unmarshalStruct{Data: "abc"},
 				UnmarshalP: &unmarshalStruct{Data: "def"},
 			},
 		},
-		{
-			msg: "bool",
+		"bool": {
 			uri: "?Bool=true",
 			expected: testStruct{
 				Bool: true,
 			},
 		},
-		{
-			msg: "bool implicit true",
+		"bool implicit true": {
 			uri: "?Bool&Test",
 			expected: testStruct{
 				Bool: true,
 			},
 		},
-		{
-			msg: "slice of string",
+		"slice of string": {
 			uri: "?Strings=a&Strings=b&Strings=c",
 			expected: testStruct{
 				Strings: []string{"a", "b", "c"},
 			},
 		},
-		{
-			msg: "slice: int, int32, int64",
+		"slice: int, int32, int64": {
 			uri: "?Ints=1&Ints=2&Ints=3&Ints32=4,5,6&Ints64=7,8,9",
 			expected: testStruct{
 				Ints:   []int{1, 2, 3},
@@ -148,41 +136,43 @@ func TestUnmarshal(t *testing.T) {
 				Ints64: []int64{7, 8, 9},
 			},
 		},
-		{
-			msg: "slice: float32, float64",
+		"slice: float32, float64": {
 			uri: "?Floats32=1.1&Floats32=2.2&Floats32=3.3&Floats64=4.4,5.5,6.6",
 			expected: testStruct{
 				Floats32: []float32{1.1, 2.2, 3.3},
 				Floats64: []float64{4.4, 5.5, 6.6},
 			},
 		},
-		{
-			msg: "slice of *int",
+		"slice of *int": {
 			uri: "?IntsP=1,2,3",
 			expected: testStruct{
-				IntsP: []*int{newInt(1), newInt(2), newInt(3)},
+				IntsP: []*int{trial.IntP(1), trial.IntP(2), trial.IntP(3)},
 			},
 		},
-		{
-			msg:      "alias type (dessert)",
+		"slice of *int with nil": {
+			uri: "?IntsP=1,2,nil,3",
+			expected: testStruct{
+				IntsP: []*int{trial.IntP(1), trial.IntP(2), nil, trial.IntP(3)},
+			},
+		},
+		"alias type (dessert)": {
 			uri:      "?Dessert=brownie",
 			expected: testStruct{Dessert: brownie},
 		},
-		{
-			msg:       "invalid alias type",
+		"invalid alias type": {
 			uri:       "?Dessert=cat",
 			shouldErr: true,
 		},
 	}
-	for _, test := range cases {
+	for msg, test := range cases {
 		var d testStruct
 		err := Unmarshal(test.uri, &d)
 		if err != nil != test.shouldErr {
-			t.Errorf("FAIL: %v error mismatch %v", test.msg, err)
+			t.Errorf("FAIL: %v error mismatch %v", msg, err)
 		} else if !test.shouldErr && !cmp.Equal(d, test.expected) {
-			t.Errorf("FAIL: %v values did not match %s", test.msg, cmp.Diff(d, test.expected))
+			t.Errorf("FAIL: %v values did not match %s", msg, cmp.Diff(d, test.expected))
 		} else {
-			t.Logf("PASS: %v", test.msg)
+			t.Logf("PASS: %v", msg)
 		}
 	}
 }
@@ -196,6 +186,7 @@ type (
 	}
 	testPath struct {
 		Path string `uri:"path"`
+		File string `uri:"filename"`
 	}
 	testOrigin struct {
 		Origin string `uri:"Origin"`
@@ -214,6 +205,23 @@ type (
 	testPrivate2 struct {
 		int int
 		Int int `uri:"int"`
+	}
+	primitiveDefault struct {
+		// basic types
+		String  string  `default:"hello"`
+		Bool    bool    `default:"true"`
+		Int     int     `default:"42"`
+		Float32 float32 `default:"12.34"`
+	}
+	sliceDefault struct {
+		Strings []string `default:"hello,world"`
+		Ints    []int    `default:"11"`
+	}
+	unmarshalDefault struct {
+		Time time.Time `default:"2018-01-01T00:00:00Z"`
+	}
+	aliasDefault struct {
+		Dessert dessert `default:"cake"`
 	}
 )
 
@@ -234,9 +242,12 @@ func TestTags(t *testing.T) {
 			expected: &testHost{Host: "localhost:8080"},
 		},
 		{
-			msg:      "Path uri tag",
-			uri:      "https://localhost:8080/usr/bin",
-			expected: &testPath{Path: "/usr/bin"},
+			msg: "Path uri tag",
+			uri: "https://localhost:8080/usr/bin/file.txt",
+			expected: &testPath{
+				Path: "/usr/bin/file.txt",
+				File: "file.txt",
+			},
 		},
 		{
 			msg:      "Authority uri tag",
@@ -263,6 +274,33 @@ func TestTags(t *testing.T) {
 			uri:      "https://local/usr/bin?Host=hello",
 			expected: &testCustom{Host: "hello"},
 		},
+		{
+			msg:      "default tag for primitive types",
+			expected: &primitiveDefault{String: "hello", Bool: true, Int: 42, Float32: 12.34},
+		},
+		{
+			msg:      "override default tag for primitive types",
+			uri:      "?String=world&Bool=false&Int=0&Float32=0.1",
+			expected: &primitiveDefault{String: "world", Bool: false, Int: 0, Float32: 0.1},
+		},
+		{
+			msg:      "default tag for slices",
+			expected: &sliceDefault{Strings: []string{"hello", "world"}, Ints: []int{11}},
+		},
+		{
+			msg:      "override default tag for slices",
+			uri:      "?Strings=test&Ints=1&Ints=2&Ints=3",
+			expected: &sliceDefault{Strings: []string{"test"}, Ints: []int{1, 2, 3}},
+		},
+		{
+			msg:      "default tag unmarshalText struct",
+			expected: &unmarshalDefault{Time: trial.Time(time.RFC3339, "2018-01-01T00:00:00Z")},
+		},
+		{
+			msg:      "override default tag unmarshalText struct",
+			uri:      "?Time=2017-04-24T12:00:00Z",
+			expected: &unmarshalDefault{Time: trial.Time(time.RFC3339, "2017-04-24T12:00:00Z")},
+		},
 	}
 	for _, test := range cases {
 		v := reflect.New(reflect.TypeOf(test.expected).Elem()).Interface()
@@ -283,14 +321,21 @@ func TestValidate(t *testing.T) {
 		shouldErr bool
 	}{
 		{
-			msg:       "Cannot write to struct",
+			msg:       "cannot write to struct",
 			data:      struct{}{},
 			shouldErr: true,
 		},
 		{
-			msg:       "Invalid uri",
+			msg:       "invalid uri",
 			uri:       "://",
 			data:      &struct{}{},
+			shouldErr: true,
+		},
+		{
+			msg: "invalid default tag",
+			data: &struct {
+				Value int `default:"abc"`
+			}{},
 			shouldErr: true,
 		},
 		{
@@ -309,7 +354,7 @@ func TestValidate(t *testing.T) {
 		if err != nil != test.shouldErr {
 			t.Errorf(test.msg)
 		} else {
-			log.Printf("PASS: %q data: %v", test.msg, test.data)
+			t.Logf("PASS: %q data: %v", test.msg, test.data)
 		}
 	}
 }
