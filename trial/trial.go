@@ -2,6 +2,8 @@ package trial
 
 import (
 	"fmt"
+	"runtime/debug"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -83,7 +85,7 @@ func (t *Trial) testCase(msg string, test Case) (r result) {
 		if rec == nil && test.ShouldPanic {
 			r = fail("FAIL: %q did not panic", msg)
 		} else if rec != nil && !test.ShouldPanic {
-			r = fail("PANIC: %q %v", msg, rec)
+			r = fail("PANIC: %q %v\n%s", msg, rec, cleanStack())
 		} else if !finished {
 			r = pass("PASS: %q", msg)
 		}
@@ -96,20 +98,36 @@ func (t *Trial) testCase(msg string, test Case) (r result) {
 		result, err = t.testFn(test.Input)
 	}
 
-	if test.ShouldErr && err == nil {
+	if (test.ShouldErr && err == nil) || (test.ExpectedErr != nil && err == nil) {
 		finished = true
 		return fail("FAIL: %q should error", msg)
-	} else if !test.ShouldErr && err != nil {
+	} else if !test.ShouldErr && err != nil && test.ExpectedErr == nil {
 		finished = true
 		return fail("FAIL: %q unexpected error %s", msg, err.Error())
-	} else if !test.ShouldErr && !t.equalFn(result, test.Expected) {
+	} else if test.ExpectedErr != nil && !isExpectedError(err, test.ExpectedErr) {
+		finished = true
+		return fail("FAIL: %q error %q does not match expected %q", msg, err, test.ExpectedErr)
+	} else if !test.ShouldErr && test.ExpectedErr == nil && !t.equalFn(result, test.Expected) {
 		finished = true
 		return fail("FAIL: %q differences %v", msg, t.diffFn(result, test.Expected))
 	} else {
 		finished = true
 		return pass("PASS: %q", msg)
 	}
-	// todo add error type check test
+
+}
+
+func cleanStack() (s string) {
+	for _, ln := range strings.Split(string(debug.Stack()), "\n") {
+		if !strings.Contains(ln, "/go-tools/trial") {
+			s += ln + "\n"
+		}
+	}
+	return s
+}
+
+func isExpectedError(actual, expected error) bool {
+	return strings.Contains(actual.Error(), expected.Error())
 }
 
 type result struct {

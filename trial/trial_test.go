@@ -1,6 +1,7 @@
 package trial
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 )
 
 func TestTrial_TestCase(t *testing.T) {
+
 	divideFn := func(args ...interface{}) (interface{}, error) {
 		return func(a, b int) (int, error) {
 			if b == 0 {
@@ -96,19 +98,36 @@ func TestTrial_TestCase(t *testing.T) {
 			},
 			expResult: result{false, `FAIL: "expected panic did not occur" did not panic`},
 		},
-		"expected error did not occur": {
+		"test should error but no error occurred": {
 			trial: New(func(args ...interface{}) (interface{}, error) {
 				return nil, nil
 			}, nil),
 			Case: Case{
 				ShouldErr: true,
 			},
-			expResult: result{false, `FAIL: "expected error did not occur" should error`},
+			expResult: result{false, `FAIL: "test should error but no error occurred" should error`},
+		},
+		"expected error string match": {
+			trial: New(func(args ...interface{}) (interface{}, error) {
+				return nil, errors.New("test error")
+			}, nil),
+			Case: Case{
+				ExpectedErr: errors.New("test error"),
+			},
+			expResult: result{true, `PASS: "expected error string match"`},
+		},
+		"expected error string does not match": {
+			trial: New(divideFn, nil),
+			Case: Case{
+				Input:       Interfaces(10, 0),
+				ExpectedErr: errors.New("test error"),
+			},
+			expResult: result{false, `FAIL: "expected error string does not match" error "divide by zero" does not match expected "test error"`},
 		},
 	}
 	for msg, test := range cases {
 		r := test.trial.testCase(msg, test.Case)
-		if !cmp.Equal(r, test.expResult) {
+		if r.Success != test.expResult.Success || !strings.Contains(r.Message, test.expResult.Message) {
 			t.Errorf("FAIL: %q %v", msg, cmp.Diff(r, test.expResult))
 		} else {
 			t.Logf("PASS: %q", msg)
