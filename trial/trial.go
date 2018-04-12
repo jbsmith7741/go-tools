@@ -2,6 +2,7 @@ package trial
 
 import (
 	"fmt"
+	"reflect"
 	"runtime/debug"
 	"strings"
 	"testing"
@@ -127,7 +128,22 @@ func cleanStack() (s string) {
 }
 
 func isExpectedError(actual, expected error) bool {
+	if err, ok := expected.(errCheck); ok {
+		return reflect.TypeOf(actual) == reflect.TypeOf(err.err)
+	}
 	return strings.Contains(actual.Error(), expected.Error())
+}
+
+type errCheck struct {
+	err error
+}
+
+func (e errCheck) Error() string {
+	return e.err.Error()
+}
+
+func ErrType(err error) error {
+	return errCheck{err}
 }
 
 type result struct {
