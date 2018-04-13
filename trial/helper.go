@@ -20,7 +20,7 @@ func ContainsFn(i1, i2 interface{}) bool {
 	return strings.Contains(s1, s2)
 }
 
-func Interfaces(args ...interface{}) interface{} {
+func Args(args ...interface{}) interface{} {
 	return args
 }
 

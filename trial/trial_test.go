@@ -119,10 +119,37 @@ func TestTrial_TestCase(t *testing.T) {
 		"expected error string does not match": {
 			trial: New(divideFn, nil),
 			Case: Case{
-				Input:       Interfaces(10, 0),
+				Input:       Args(10, 0),
 				ExpectedErr: errors.New("test error"),
 			},
 			expResult: result{false, `FAIL: "expected error string does not match" error "divide by zero" does not match expected "test error"`},
+		},
+		"expected error of type testErr": {
+			trial: New(func(args ...interface{}) (interface{}, error) {
+				return nil, testErr{}
+			}, nil),
+			Case: Case{
+				ExpectedErr: ErrType(testErr{}),
+			},
+			expResult: result{true, `PASS: "expected error of type testErr"`},
+		},
+		"error type testErr with nil response": {
+			trial: New(func(args ...interface{}) (interface{}, error) {
+				return nil, nil
+			}, nil),
+			Case: Case{
+				ExpectedErr: ErrType(testErr{}),
+			},
+			expResult: result{false, `FAIL: "error type testErr with nil response"`},
+		},
+		"error type testErr with mismatch response": {
+			trial: New(func(args ...interface{}) (interface{}, error) {
+				return nil, errors.New("some error")
+			}, nil),
+			Case: Case{
+				ExpectedErr: ErrType(testErr{}),
+			},
+			expResult: result{false, `FAIL: "error type testErr with mismatch response"`},
 		},
 	}
 	for msg, test := range cases {
@@ -133,4 +160,10 @@ func TestTrial_TestCase(t *testing.T) {
 			t.Logf("PASS: %q", msg)
 		}
 	}
+}
+
+type testErr struct{}
+
+func (e testErr) Error() string {
+	return ""
 }
