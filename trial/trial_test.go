@@ -1,16 +1,15 @@
 package trial
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 )
 
 func TestTrial_TestCase(t *testing.T) {
-
 	divideFn := func(args ...interface{}) (interface{}, error) {
 		return func(a, b int) (int, error) {
 			if b == 0 {
@@ -160,6 +159,60 @@ func TestTrial_TestCase(t *testing.T) {
 			t.Logf("PASS: %q", msg)
 		}
 	}
+}
+
+func TestContainsFn(t *testing.T) {
+	New(func(args ...interface{}) (interface{}, error) {
+		return ContainsFn(args[0], args[1]), nil
+	}, map[string]Case{
+		"Blank string matches anything": {
+			Input:    Args("Hello world", ""),
+			Expected: true,
+		},
+		"Case sensitive": {
+			Input:    Args("Hello World", "hello"),
+			Expected: false,
+		},
+		"Nil matches everything": {
+			Input:    Args("hello world", nil),
+			Expected: true,
+		},
+		"Match substring": {
+			Input:    Args("abcdefghijklmnopqrstuvwxyz", "lmnop"),
+			Expected: true,
+		},
+		"Match full string": {
+			Input:    Args("abcdefghijklmnopqrstuvwxyz", "abcdefghijklmnopqrstuvwxyz"),
+			Expected: true,
+		},
+	}).Test(t)
+}
+
+func TestCompareFn(t *testing.T) {
+	type test struct {
+		Public  int
+		private string
+	}
+	New(func(args ...interface{}) (interface{}, error) {
+		return compareFn(args[0], args[1]), nil
+	}, map[string]Case{
+		"strings are equal": {
+			Input:    Args("hello", "hello"),
+			Expected: true,
+		},
+		"ints not equal": {
+			Input:    Args(1, 2),
+			Expected: false,
+		},
+		"ignore private methods": {
+			Input:    Args(test{Public: 1}, test{Public: 1}),
+			Expected: true,
+		},
+		"nils don't panic": {
+			Input:    Args(nil, nil),
+			Expected: true,
+		},
+	}).Test(t)
 }
 
 type testErr struct{}

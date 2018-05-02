@@ -1,24 +1,8 @@
 package trial
 
 import (
-	"fmt"
-	"strings"
 	"time"
 )
-
-// ContainsFn uses the strings.Contain method to compare two interfaces.
-// both interfaces need to be strings or implementer the stringer method.
-func ContainsFn(i1, i2 interface{}) bool {
-	s1, ok := i1.(string)
-	if !ok {
-		s1 = i1.(fmt.Stringer).String()
-	}
-	s2, ok := i2.(string)
-	if !ok {
-		s2 = i2.(fmt.Stringer).String()
-	}
-	return strings.Contains(s1, s2)
-}
 
 func Args(args ...interface{}) interface{} {
 	return args
@@ -67,6 +51,14 @@ func Time(layout, value string) time.Time {
 		panic(err)
 	}
 	return t
+}
+
+func TimeHour(value string) time.Time {
+	return Time("2006-01-02T15", value)
+}
+
+func TimeDay(value string) time.Time {
+	return Time("2006-01-02", value)
 }
 
 func Times(layout string, values ...string) []time.Time {
