@@ -12,8 +12,8 @@ import (
 
 type (
 	TestFn  func(args ...interface{}) (interface{}, error)
-	DiffFn  func(interface{}, interface{}) string
-	EqualFn func(interface{}, interface{}) bool
+	DiffFn  func(actual interface{}, expected interface{}) string
+	EqualFn func(actual interface{}, expected interface{}) bool
 )
 
 type Trial struct {
@@ -21,32 +21,6 @@ type Trial struct {
 	testFn  TestFn
 	diffFn  DiffFn
 	equalFn EqualFn
-}
-
-func New(fn TestFn, cases map[string]Case) *Trial {
-	if cases == nil {
-		cases = make(map[string]Case)
-	}
-	return &Trial{
-		cases:  cases,
-		testFn: fn,
-		diffFn: func(i1, i2 interface{}) string {
-			return cmp.Diff(i1, i2)
-		},
-		equalFn: func(i1, i2 interface{}) bool {
-			return cmp.Equal(i1, i2)
-		},
-	}
-}
-
-func (t *Trial) EqualFn(fn EqualFn) *Trial {
-	t.equalFn = fn
-	return t
-}
-
-func (t *Trial) DiffFn(fn DiffFn) *Trial {
-	t.diffFn = fn
-	return t
 }
 
 type Case struct {
@@ -59,14 +33,27 @@ type Case struct {
 	ShouldPanic bool  // is a panic expected
 }
 
-/*func (t *Trial) Add(msg string, c Case) *Trial {
-	if _, found := t.cases[msg]; found {
-		// todo: considering changing to t.Fatalf (t *testing.T)
-		log.Fatalf("test case %q already exists", msg)
+func New(fn TestFn, cases map[string]Case) *Trial {
+	if cases == nil {
+		cases = make(map[string]Case)
 	}
-	t.cases[msg] = c
+	return &Trial{
+		cases:   cases,
+		testFn:  fn,
+		diffFn:  diffFn,
+		equalFn: compareFn,
+	}
+}
+
+func (t *Trial) EqualFn(fn EqualFn) *Trial {
+	t.equalFn = fn
 	return t
-}*/
+}
+
+func (t *Trial) DiffFn(fn DiffFn) *Trial {
+	t.diffFn = fn
+	return t
+}
 
 func (trial *Trial) Test(t *testing.T) {
 	for msg, test := range trial.cases {
@@ -115,9 +102,51 @@ func (t *Trial) testCase(msg string, test Case) (r result) {
 		finished = true
 		return pass("PASS: %q", msg)
 	}
-
 }
 
+// ContainsFn uses the strings.Contain method to compare two interfaces.
+// both interfaces need to be strings or implementer the stringer method.
+func ContainsFn(actual, expected interface{}) bool {
+	// if nothing is expected we have a match
+	if expected == nil {
+		return true
+	}
+	s1, ok := actual.(string)
+	if !ok {
+		s1 = actual.(fmt.Stringer).String()
+	}
+	s2, ok := expected.(string)
+	if !ok {
+		s2 = expected.(fmt.Stringer).String()
+	}
+	return strings.Contains(s1, s2)
+}
+
+// compareFn uses the cmp.Equal method to compare two interfaces including unexported fields
+func compareFn(actual, expected interface{}) bool {
+	t := reflect.TypeOf(actual)
+	if reflect.TypeOf(actual) != reflect.TypeOf(expected) {
+		return false
+	}
+	if t != nil && t.Kind() == reflect.Struct {
+		return cmp.Equal(actual, expected, cmp.AllowUnexported(actual))
+	}
+	return cmp.Equal(actual, expected)
+}
+
+// diffFn use the cmp.Diff method to display differences between two interfaces
+func diffFn(actual, expected interface{}) string {
+	var opts []cmp.Option
+	if reflect.TypeOf(actual).Kind() == reflect.Struct {
+		opts = append(opts, cmp.AllowUnexported(actual))
+	}
+	if reflect.TypeOf(expected).Kind() == reflect.Struct {
+		opts = append(opts, cmp.AllowUnexported(expected))
+	}
+	return cmp.Diff(actual, expected)
+}
+
+// cleanStack removes unhelpful lines from a panic stack track
 func cleanStack() (s string) {
 	for _, ln := range strings.Split(string(debug.Stack()), "\n") {
 		if !strings.Contains(ln, "/go-tools/trial") {
