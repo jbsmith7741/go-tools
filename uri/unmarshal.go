@@ -4,11 +4,10 @@ import (
 	"encoding"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"path/filepath"
 
 	"github.com/jbsmith7741/go-tools/appenderr"
 )
@@ -52,6 +51,13 @@ func Unmarshal(uri string, v interface{}) error {
 		}
 
 		data := values.Get(name)
+
+		required := vStruct.Type().Field(i).Tag.Get(requiredTag)
+		if required == "true" && data == "" && def == "" {
+			errs.Add(fmt.Errorf("%s is required", name))
+			continue
+		}
+
 		switch tag {
 		case scheme:
 			data = u.Scheme

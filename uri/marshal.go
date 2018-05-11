@@ -12,8 +12,9 @@ var (
 	Separator = ","
 
 	// supported struct tags
-	uriTag     = "uri"
-	defaultTag = "default"
+	uriTag      = "uri"
+	defaultTag  = "default"
+	requiredTag = "required"
 
 	// supported tag values
 	scheme    = "scheme"
