@@ -178,34 +178,6 @@ func TestUnmarshal(t *testing.T) {
 }
 
 type (
-	testScheme struct {
-		Schema string `uri:"scheme"`
-	}
-	testHost struct {
-		Host string `uri:"host"`
-	}
-	testPath struct {
-		Path string `uri:"path"`
-		File string `uri:"filename"`
-	}
-	testOrigin struct {
-		Origin string `uri:"Origin"`
-	}
-	testAuthority struct {
-		Authority string `uri:"authority"`
-	}
-	testCustom struct {
-		OldInt int `uri:"NewInt"`
-		Host   string
-	}
-	testPrivate struct {
-		int    int    `uri:"int"`
-		String string `uri:"string"`
-	}
-	testPrivate2 struct {
-		int int
-		Int int `uri:"int"`
-	}
 	primitiveDefault struct {
 		// basic types
 		String  string  `default:"hello"`
@@ -217,144 +189,166 @@ type (
 		Strings []string `default:"hello,world"`
 		Ints    []int    `default:"11"`
 	}
-	unmarshalDefault struct {
-		Time time.Time `default:"2018-01-01T00:00:00Z"`
-	}
 	aliasDefault struct {
 		Dessert dessert `default:"cake"`
 	}
 )
 
 func TestTags(t *testing.T) {
-	cases := []struct {
-		msg      string
+	cases := map[string]struct {
 		uri      string
 		expected interface{}
 	}{
-		{
-			msg:      "Scheme uri tag",
-			uri:      "https://localhost:8080/usr/bin",
-			expected: &testScheme{Schema: "https"},
+		"Scheme uri tag": {
+			uri: "https://localhost:8080/usr/bin",
+			expected: &struct {
+				Schema string `uri:"scheme"`
+			}{Schema: "https"},
 		},
-		{
-			msg:      "Host uri tag",
-			uri:      "https://localhost:8080/usr/bin",
-			expected: &testHost{Host: "localhost:8080"},
+		"Host uri tag": {
+			uri: "https://localhost:8080/usr/bin",
+			expected: &struct {
+				Host string `uri:"host"`
+			}{Host: "localhost:8080"},
 		},
-		{
-			msg: "Path uri tag",
+		"Path uri tag": {
 			uri: "https://localhost:8080/usr/bin/file.txt",
-			expected: &testPath{
+			expected: &struct {
+				Path string `uri:"path"`
+				File string `uri:"filename"`
+			}{
 				Path: "/usr/bin/file.txt",
 				File: "file.txt",
 			},
 		},
-		{
-			msg:      "Authority uri tag",
-			uri:      "https://localhost:8080/usr/bin",
-			expected: &testAuthority{Authority: "https://localhost:8080"},
+		"Authority uri tag": {
+			uri: "https://localhost:8080/usr/bin",
+			expected: &struct {
+				Authority string `uri:"authority"`
+			}{Authority: "https://localhost:8080"},
 		},
-		{
-			msg:      "Origin uri tag",
-			uri:      "https://localhost:8080/usr/bin",
-			expected: &testOrigin{Origin: "https://localhost:8080/usr/bin"},
+		"Origin uri tag": {
+			uri: "https://localhost:8080/usr/bin",
+			expected: &struct {
+				Origin string `uri:"Origin"`
+			}{Origin: "https://localhost:8080/usr/bin"},
 		},
-		{
-			msg:      "Origin uri tag without authority",
-			uri:      "/usr/bin",
-			expected: &testOrigin{Origin: "/usr/bin"},
+		"Origin uri tag without authority": {
+			uri: "/usr/bin",
+			expected: &struct {
+				Origin string `uri:"Origin"`
+			}{Origin: "/usr/bin"},
 		},
-		{
-			msg:      "Custom int name",
-			uri:      "?NewInt=10",
-			expected: &testCustom{OldInt: 10},
+		"Custom int name": {
+			uri: "?NewInt=10",
+			expected: &struct {
+				OldInt int `uri:"NewInt"`
+			}{OldInt: 10},
 		},
-		{
-			msg:      "Var named Host without tag",
-			uri:      "https://local/usr/bin?Host=hello",
-			expected: &testCustom{Host: "hello"},
+		"Var named Host without tag": {
+			uri: "https://local/usr/bin?Host=hello",
+			expected: &struct {
+				Host string
+			}{Host: "hello"},
 		},
-		{
-			msg:      "default tag for primitive types",
+		"default tag for primitive types": {
 			expected: &primitiveDefault{String: "hello", Bool: true, Int: 42, Float32: 12.34},
 		},
-		{
-			msg:      "override default tag for primitive types",
+		"override default tag for primitive types": {
 			uri:      "?String=world&Bool=false&Int=0&Float32=0.1",
 			expected: &primitiveDefault{String: "world", Bool: false, Int: 0, Float32: 0.1},
 		},
-		{
-			msg:      "default tag for slices",
+		"default tag for slices": {
 			expected: &sliceDefault{Strings: []string{"hello", "world"}, Ints: []int{11}},
 		},
-		{
-			msg:      "override default tag for slices",
+		"override default tag for slices": {
 			uri:      "?Strings=test&Ints=1&Ints=2&Ints=3",
 			expected: &sliceDefault{Strings: []string{"test"}, Ints: []int{1, 2, 3}},
 		},
-		{
-			msg:      "default tag unmarshalText struct",
-			expected: &unmarshalDefault{Time: trial.Time(time.RFC3339, "2018-01-01T00:00:00Z")},
+		"default tag unmarshalText struct": {
+			expected: &struct {
+				Time time.Time `default:"2018-01-01T00:00:00Z"`
+			}{Time: trial.Time(time.RFC3339, "2018-01-01T00:00:00Z")},
 		},
-		{
-			msg:      "override default tag unmarshalText struct",
-			uri:      "?Time=2017-04-24T12:00:00Z",
-			expected: &unmarshalDefault{Time: trial.Time(time.RFC3339, "2017-04-24T12:00:00Z")},
+		"override default tag unmarshalText struct": {
+			uri: "?Time=2017-04-24T12:00:00Z",
+			expected: &struct {
+				Time time.Time `default:"2018-01-01T00:00:00Z"`
+			}{Time: trial.Time(time.RFC3339, "2017-04-24T12:00:00Z")},
 		},
 	}
-	for _, test := range cases {
+	for name, test := range cases {
 		v := reflect.New(reflect.TypeOf(test.expected).Elem()).Interface()
 		Unmarshal(test.uri, v)
 		if !cmp.Equal(v, test.expected) {
-			t.Errorf("FAIL: %v values did not match %s", test.msg, cmp.Diff(v, test.expected))
+			t.Errorf("FAIL: %v values did not match %s", name, cmp.Diff(v, test.expected))
 		} else {
-			t.Logf("PASS: %v", test.msg)
+			t.Logf("PASS: %v", name)
 		}
 	}
 }
 
 func TestValidate(t *testing.T) {
-	cases := []struct {
-		msg       string
+	cases := map[string]struct {
 		uri       string
 		data      interface{}
 		shouldErr bool
 	}{
-		{
-			msg:       "cannot write to struct",
+		"cannot write to struct": {
 			data:      struct{}{},
 			shouldErr: true,
 		},
-		{
-			msg:       "invalid uri",
+		"invalid uri": {
 			uri:       "://",
 			data:      &struct{}{},
 			shouldErr: true,
 		},
-		{
-			msg: "invalid default tag",
+		"invalid default tag": {
 			data: &struct {
 				Value int `default:"abc"`
 			}{},
 			shouldErr: true,
 		},
-		{
-			msg:  "private variables",
-			uri:  "?string=hello&int=1",
-			data: &testPrivate{},
+		"private variables": {
+			uri: "?string=hello&int=1",
+			data: &struct {
+				int    int    `uri:"int"`
+				String string `uri:"string"`
+			}{},
 		},
-		{
-			msg:  "private variables",
-			uri:  "int=1",
-			data: &testPrivate2{Int: 1},
+		"private variables with same name": {
+			uri: "int=1",
+			data: &struct {
+				int int
+				Int int `uri:"int"`
+			}{Int: 1},
+		},
+		"required fields error is not provided": {
+			uri: "",
+			data: &struct {
+				Int int `uri:"int" required:"true"`
+			}{},
+			shouldErr: true,
+		},
+		"required field ok when provided": {
+			uri: "?int=10",
+			data: &struct {
+				Int int `uri:"int" required:"true"`
+			}{Int: 10},
+		},
+		"required field ignored on default": {
+			uri: "",
+			data: &struct {
+				Int int `uri:"int" required:"true" default:"10"`
+			}{Int: 10},
 		},
 	}
-	for _, test := range cases {
+	for name, test := range cases {
 		err := Unmarshal(test.uri, test.data)
 		if err != nil != test.shouldErr {
-			t.Errorf(test.msg)
+			t.Errorf("FAIL: %q", name)
 		} else {
-			t.Logf("PASS: %q data: %v", test.msg, test.data)
+			t.Logf("PASS: %q data: %v", name, test.data)
 		}
 	}
 }

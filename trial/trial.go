@@ -143,7 +143,7 @@ func diffFn(actual, expected interface{}) string {
 	if reflect.TypeOf(expected).Kind() == reflect.Struct {
 		opts = append(opts, cmp.AllowUnexported(expected))
 	}
-	return cmp.Diff(actual, expected)
+	return cmp.Diff(actual, expected, opts...)
 }
 
 // cleanStack removes unhelpful lines from a panic stack track
