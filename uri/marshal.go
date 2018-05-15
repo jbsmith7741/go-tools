@@ -23,6 +23,7 @@ var (
 	filename  = "filename"
 	authority = "authority" // scheme://host
 	origin    = "origin"    // scheme://host/path
+	fragment  = "fragment"  // anything after hash #
 )
 
 func Marshal(v interface{}) (s string) {
