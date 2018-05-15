@@ -50,14 +50,8 @@ func Unmarshal(uri string, v interface{}) error {
 			}
 		}
 
-		data := values.Get(name)
-
 		required := vStruct.Type().Field(i).Tag.Get(requiredTag)
-		if required == "true" && data == "" && def == "" {
-			errs.Add(fmt.Errorf("%s is required", name))
-			continue
-		}
-
+		data := values.Get(name)
 		switch tag {
 		case scheme:
 			data = u.Scheme
@@ -74,10 +68,17 @@ func Unmarshal(uri string, v interface{}) error {
 			}
 		case authority:
 			data = fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+		case fragment:
+			data = u.Fragment
 		default:
-			if len(values[name]) == 0 {
+			if len(values[name]) == 0 && !(required == "true" && def == "") {
 				continue
 			}
+		}
+
+		if required == "true" && data == "" && def == "" {
+			errs.Add(fmt.Errorf("%s is required", name))
+			continue
 		}
 
 		if field.Kind() == reflect.Slice {
@@ -88,6 +89,7 @@ func Unmarshal(uri string, v interface{}) error {
 			errs.Add(fmt.Errorf("%s can not be set to %s (%s)", data, name, field.Type()))
 		}
 	}
+
 	return errs.ErrOrNil()
 }
 

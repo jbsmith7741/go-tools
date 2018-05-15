@@ -276,6 +276,13 @@ func TestTags(t *testing.T) {
 				Time time.Time `default:"2018-01-01T00:00:00Z"`
 			}{Time: trial.Time(time.RFC3339, "2017-04-24T12:00:00Z")},
 		},
+		"uri with fragment tag": {
+			uri: "?Int=10#hello world",
+			expected: &struct {
+				Int     int
+				Message string `uri:"fragment"`
+			}{Int: 10, Message: "hello world"},
+		},
 	}
 	for name, test := range cases {
 		v := reflect.New(reflect.TypeOf(test.expected).Elem()).Interface()
@@ -341,6 +348,13 @@ func TestValidate(t *testing.T) {
 			data: &struct {
 				Int int `uri:"int" required:"true" default:"10"`
 			}{Int: 10},
+		},
+		"required fragment valid when provided": {
+			uri: "?Int=10#name=hello",
+			data: &struct {
+				Int  int
+				Name string `uri:"fragment" required:"true"`
+			}{Int: 10, Name: "hello"},
 		},
 	}
 	for name, test := range cases {
