@@ -22,6 +22,7 @@ type Trial struct {
 	diffFn  DiffFn
 	equalFn EqualFn
 }
+type Cases map[string]Case
 
 type Case struct {
 	Input    interface{}
@@ -55,13 +56,16 @@ func (t *Trial) DiffFn(fn DiffFn) *Trial {
 	return t
 }
 
-func (trial *Trial) Test(t *testing.T) {
+func (trial *Trial) Test(t testing.TB) {
+	if h, ok := t.(tHelper); ok {
+		h.Helper()
+	}
 	for msg, test := range trial.cases {
 		r := trial.testCase(msg, test)
 		if r.Success {
 			t.Log(r.Message)
 		} else {
-			t.Error(r.Message)
+			t.Error("\033[31m" + r.Message + "\033[39m")
 		}
 	}
 }
@@ -192,4 +196,8 @@ func fail(format string, args ...interface{}) result {
 		Success: false,
 		Message: fmt.Sprintf(format, args...),
 	}
+}
+
+type tHelper interface {
+	Helper()
 }
