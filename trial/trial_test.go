@@ -194,7 +194,7 @@ func TestCompareFn(t *testing.T) {
 		private string
 	}
 	New(func(args ...interface{}) (interface{}, error) {
-		return compareFn(args[0], args[1]), nil
+		return Equal(args[0], args[1]), nil
 	}, map[string]Case{
 		"strings are equal": {
 			Input:    Args("hello", "hello"),

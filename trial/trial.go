@@ -41,8 +41,8 @@ func New(fn TestFn, cases map[string]Case) *Trial {
 	return &Trial{
 		cases:   cases,
 		testFn:  fn,
-		diffFn:  diffFn,
-		equalFn: compareFn,
+		diffFn:  Diff,
+		equalFn: Equal,
 	}
 }
 
@@ -126,26 +126,35 @@ func ContainsFn(actual, expected interface{}) bool {
 	return strings.Contains(s1, s2)
 }
 
-// compareFn uses the cmp.Equal method to compare two interfaces including unexported fields
-func compareFn(actual, expected interface{}) bool {
+// Equal uses the cmp.Equal method to compare two interfaces including unexported fields
+func Equal(actual, expected interface{}) bool {
 	t := reflect.TypeOf(actual)
 	if reflect.TypeOf(actual) != reflect.TypeOf(expected) {
 		return false
 	}
-	if t != nil && t.Kind() == reflect.Struct {
+
+	if t == nil {
+	} else if t.Kind() == reflect.Struct {
 		return cmp.Equal(actual, expected, cmp.AllowUnexported(actual))
+	} else if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
+		v := reflect.ValueOf(actual).Elem().Interface()
+		return cmp.Equal(actual, expected, cmp.AllowUnexported(v))
 	}
 	return cmp.Equal(actual, expected)
 }
 
-// diffFn use the cmp.Diff method to display differences between two interfaces
-func diffFn(actual, expected interface{}) string {
+// Diff use the cmp.Diff method to display differences between two interfaces
+func Diff(actual, expected interface{}) string {
 	var opts []cmp.Option
-	if reflect.TypeOf(actual).Kind() == reflect.Struct {
+	if t := reflect.TypeOf(actual); t.Kind() == reflect.Struct {
 		opts = append(opts, cmp.AllowUnexported(actual))
+	} else if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
+		opts = append(opts, cmp.AllowUnexported(reflect.ValueOf(actual).Elem().Interface()))
 	}
-	if reflect.TypeOf(expected).Kind() == reflect.Struct {
+	if t := reflect.TypeOf(expected); t.Kind() == reflect.Struct {
 		opts = append(opts, cmp.AllowUnexported(expected))
+	} else if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
+		opts = append(opts, cmp.AllowUnexported(reflect.ValueOf(expected).Elem().Interface()))
 	}
 	return cmp.Diff(actual, expected, opts...)
 }
