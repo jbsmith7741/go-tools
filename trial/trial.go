@@ -109,21 +109,48 @@ func (t *Trial) testCase(msg string, test Case) (r result) {
 }
 
 // ContainsFn uses the strings.Contain method to compare two interfaces.
-// both interfaces need to be strings or implementer the stringer method.
+// both interfaces need to be strings or slice of strings.
 func ContainsFn(actual, expected interface{}) bool {
 	// if nothing is expected we have a match
 	if expected == nil {
 		return true
 	}
-	s1, ok := actual.(string)
-	if !ok {
-		s1 = actual.(fmt.Stringer).String()
+	s1 := asStrings(actual)
+	s2 := asStrings(expected)
+	if s1 == nil {
+		panic(fmt.Errorf("%s is not a string", reflect.TypeOf(actual)))
 	}
-	s2, ok := expected.(string)
-	if !ok {
-		s2 = expected.(fmt.Stringer).String()
+	if s2 == nil {
+		panic(fmt.Errorf("%s is not a string", reflect.TypeOf(expected)))
 	}
-	return strings.Contains(s1, s2)
+
+	return containsSlice(s1, s2...)
+}
+
+func asStrings(i interface{}) []string {
+	if s, ok := i.([]string); ok {
+		return s
+	}
+	if s, ok := i.(string); ok {
+		return []string{s}
+	}
+	return nil
+}
+
+func containsSlice(actual []string, expected ...string) bool {
+	for _, s := range expected {
+		found := false
+		for _, act := range actual {
+			if strings.Contains(act, s) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 // Equal uses the cmp.Equal method to compare two interfaces including unexported fields
