@@ -185,6 +185,18 @@ func TestContainsFn(t *testing.T) {
 			Input:    Args("abcdefghijklmnopqrstuvwxyz", "abcdefghijklmnopqrstuvwxyz"),
 			Expected: true,
 		},
+		"slice of strings": {
+			Input:    Args([]string{"hello", "world"}, "world"),
+			Expected: true,
+		},
+		"expected is slice subset of actual": {
+			Input:    Args([]string{"the", "quick", "brown", "fox"}, []string{"fox", "quick"}),
+			Expected: true,
+		},
+		"Invalid input": {
+			Input:       Args("Hello", 10),
+			ShouldPanic: true,
+		},
 	}).Test(t)
 }
 
