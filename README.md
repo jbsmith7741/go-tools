@@ -31,6 +31,3 @@ func CheckLine(line string)  error {
 a sql helper class that simplifies configs and connections to databases. sqlh removes the need for anonymous imports and allows basic testing of database calls without having to worry about connecting to a real database.
 
 sqlh should be used to test around database calls and not to test the calls themselves. If you need to test the database logic use [sqlmock](https://github.com/DATA-DOG/go-sqlmock)
-
-## trial
-trial is a helper to write Table Driven Tests.
