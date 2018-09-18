@@ -1,5 +1,7 @@
+[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/jbsmith7741/go-tools)
 [![Build Status](https://travis-ci.org/jbsmith7741/go-tools.svg?branch=master)](https://travis-ci.org/jbsmith7741/go-tools)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jbsmith7741/go-tools)](https://goreportcard.com/report/github.com/jbsmith7741/go-tools)
+[![codecov](https://codecov.io/gh/jbsmith7741/go-tools/branch/master/graph/badge.svg)](https://codecov.io/gh/jbsmith7741/go-tools)
 
 # go-tools
 a collection of useful go libraries
