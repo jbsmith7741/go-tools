@@ -1,6 +1,7 @@
 package appenderr
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -67,6 +68,12 @@ func (e *AppendErr) Add(err error) {
 		}
 	}
 	return
+}
+
+// Addf creates an error using fmt.Errorf and adds it to the error list
+func (e *AppendErr) Addf(format string, args ...interface{}) {
+	err := fmt.Errorf(format, args...)
+	e.Add(err)
 }
 
 func (e *AppendErr) Error() (s string) {
