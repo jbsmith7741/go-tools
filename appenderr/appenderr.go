@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // AppendErr a helper error struct that counts and removes duplicates errors.
@@ -74,6 +76,22 @@ func (e *AppendErr) Add(err error) {
 func (e *AppendErr) Addf(format string, args ...interface{}) {
 	err := fmt.Errorf(format, args...)
 	e.Add(err)
+}
+
+// Wrap an error message and add it to the error list.
+// see errors.Wrap
+func (e *AppendErr) Wrap(err error, message string) {
+	if err != nil {
+		e.Add(errors.Wrap(err, message))
+	}
+}
+
+// Wrapf wrap an error message with a formated message
+// see errors.Wrapf
+func (e *AppendErr) Wrapf(err error, format string, args ...interface{}) {
+	if err != nil {
+		e.Add(errors.Wrapf(err, format, args...))
+	}
 }
 
 func (e *AppendErr) Error() (s string) {
