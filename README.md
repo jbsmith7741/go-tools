@@ -16,7 +16,7 @@ This has been migrated to its own repo see [https://github.com/jbsmith7741/uri]
 A lot of times we have functions that have multiple error checks in them. Sometimes its helpful to be able to lot at full set of errors rather than the first occurring error. AppendErr is an easy way to add multiple errors together and return the whole set in a single error interface. appenderr is thread safe and can be used to collect errors that occur in different go routines. Each error is counted (based on the string value) and displayed on it's own line.
 
 ``` go
-// Checkline verifies that the line is a list of comma seperated integers.
+// Checkline verifies that the line is a list of comma separated integers.
 // It returns a list of invalid fields if any exist
 func CheckLine(line string)  error {
     errs := appenderr.New() 
@@ -33,3 +33,9 @@ func CheckLine(line string)  error {
 a sql helper class that simplifies configs and connections to databases. sqlh removes the need for anonymous imports and allows basic testing of database calls without having to worry about connecting to a real database.
 
 sqlh should be used to test around database calls and not to test the calls themselves. If you need to test the database logic use [sqlmock](https://github.com/DATA-DOG/go-sqlmock)
+
+
+## gtools 
+temporary holding spot for tools i find helpful 
+
+- PerciseFloat - usefully for truncating off unnecessary digits of a float. 
