@@ -39,3 +39,4 @@ sqlh should be used to test around database calls and not to test the calls them
 temporary holding spot for tools i find helpful 
 
 - PerciseFloat - usefully for truncating off unnecessary digits of a float. 
+- PrintDuration - extends standard lib duration string printing by adding day and year and includes 2 digits truncation on second. 
