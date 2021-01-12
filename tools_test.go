@@ -96,6 +96,22 @@ func TestPrintDuration(t *testing.T) {
 			Input:    3*durYear + 120*durDay + 7*time.Hour + 31*time.Minute + 12*time.Second + 120*time.Millisecond,
 			Expected: "3y120d7h31m12.12s",
 		},
+		"neg full year": {
+			Input:    -3*durYear - 120*durDay - 7*time.Hour - 31*time.Minute - 12*time.Second - 120*time.Millisecond,
+			Expected: "-3y120d7h31m12.12s",
+		},
+		"neg milli": {
+			Input:    -28 * time.Millisecond,
+			Expected: "-28ms",
+		},
+		"neg day": {
+			Input:    -72 * time.Hour,
+			Expected: "-3d",
+		},
+		"neg hour+sec": {
+			Input:    -2*time.Hour - 12*time.Second,
+			Expected: "-2h12s",
+		},
 	}
 	trial.New(fn, cases).Test(t)
 }
