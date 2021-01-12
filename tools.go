@@ -22,15 +22,20 @@ func PrintDuration(d time.Duration) (s string) {
 	if d == 0 {
 		return "0s"
 	}
+	// deal with negatives
+	if d < 0 {
+		s = "-"
+		d *= -1
+	}
 	if d < time.Microsecond {
-		return strconv.FormatInt(int64(d), 10) + "ns"
+		return s + strconv.FormatInt(int64(d), 10) + "ns"
 	}
 	if d < time.Millisecond {
 
-		return fDuration(d, time.Microsecond) + "µs"
+		return s + fDuration(d, time.Microsecond) + "µs"
 	}
 	if d < time.Second {
-		return fDuration(d, time.Millisecond) + "ms"
+		return s + fDuration(d, time.Millisecond) + "ms"
 	}
 	// add year
 	y := int(d / durYear)
