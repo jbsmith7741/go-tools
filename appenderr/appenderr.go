@@ -40,6 +40,26 @@ func New() *AppendErr {
 	return e
 }
 
+// Is uses errors.Is for each recorded error
+func (e *AppendErr) Is(err error) bool {
+	for _, v := range e.errs {
+		if errors.Is(v.err, e) {
+			return true
+		}
+	}
+	return false
+}
+
+// As uses errors.As for each recorded error
+func (e *AppendErr) As(err interface{}) bool {
+	for _, v := range e.errs {
+		if errors.As(v.err, e) {
+			return true
+		}
+	}
+	return false
+}
+
 // Add an error to stack, appendErr will ignore nil errors
 func (e *AppendErr) Add(err error) {
 	if err == nil {
