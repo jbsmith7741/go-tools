@@ -1,6 +1,7 @@
 package gtools
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -85,4 +86,35 @@ func fDuration(d time.Duration, precision time.Duration) string {
 		return s
 	}
 	return s + strconv.Itoa(i) // second decimal
+}
+
+type integer interface {
+	~int | ~int16 | ~int32 | ~int64 | ~uint | ~uint16 | ~uint32 | ~uint64
+}
+
+func Bytes[N integer](i N) string {
+	count, prev := 0, i
+	for ; i > 4096; count++ {
+		prev = i
+		i >>= 10
+	}
+	v := fmt.Sprintf("%.1f", float64(prev)/1024.0)
+	switch count {
+	case 0:
+		return strconv.FormatUint(uint64(i), 10)
+	case 1:
+		return v + "kB"
+	case 2:
+		return v + "MB"
+	case 3:
+		return v + "GB"
+	case 4:
+		return v + "TB"
+	case 5:
+		return v + "PB"
+	case 6:
+		return v + "EB"
+	default:
+		return v + "u" + strconv.Itoa(count)
+	}
 }

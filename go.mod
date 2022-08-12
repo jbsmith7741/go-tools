@@ -1,6 +1,6 @@
 module github.com/jbsmith7741/go-tools
 
-go 1.14
+go 1.18
 
 require (
 	github.com/go-sql-driver/mysql v1.5.0

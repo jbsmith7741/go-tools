@@ -115,3 +115,51 @@ func TestPrintDuration(t *testing.T) {
 	}
 	trial.New(fn, cases).Test(t)
 }
+
+const (
+	IByte = 1
+	KByte = IByte * 1000
+	MByte = KByte * 1000
+	GByte = MByte * 1000
+	TByte = GByte * 1000
+	PByte = TByte * 1000
+	EByte = PByte * 1000
+)
+
+func TestBytes(t *testing.T) {
+	type testStruct struct {
+		name     string
+		actual   string
+		expected string
+	}
+	tests := []testStruct{
+		{"bytes(0)", Bytes(0), "0 B"},
+		{"bytes(1)", Bytes(1), "1 B"},
+		{"bytes(803)", Bytes(803), "803 B"},
+		{"bytes(999)", Bytes(999), "999 B"},
+
+		{"bytes(1024)", Bytes(1024), "1.0 kB"},
+		{"bytes(9999)", Bytes(9999), "10 kB"},
+		{"bytes(1MB - 1)", Bytes(MByte - 2014), "1000 kB"},
+
+		{"bytes(1MB)", Bytes(1024 * 1024), "1.0 MB"},
+		{"bytes(1GB - 1K)", Bytes(GByte - KByte), "1000 MB"},
+
+		{"bytes(1GB)", Bytes(GByte), "1.0 GB"},
+		{"bytes(1TB - 1M)", Bytes(TByte - MByte), "1000 GB"},
+		{"bytes(10MB)", Bytes(9999 * 1000), "10 MB"},
+
+		{"bytes(1TB)", Bytes(TByte), "1.0 TB"},
+		{"bytes(1PB - 1T)", Bytes(PByte - TByte), "999 TB"},
+
+		{"bytes(1PB)", Bytes(PByte), "1.0 PB"},
+		{"bytes(1PB - 1T)", Bytes(EByte - PByte), "999 PB"},
+
+		{"bytes(1EB)", Bytes(EByte), "1.0 EB"},
+	}
+	for _, v := range tests {
+		if v.actual != v.expected {
+			t.Errorf("FAIL: %v %q!=%q", v.name, v.actual, v.expected)
+		}
+	}
+}
