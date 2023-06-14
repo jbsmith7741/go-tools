@@ -1,6 +1,7 @@
 package gtools
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,11 +13,10 @@ func TestPreciseFloat(t *testing.T) {
 		float  float64
 		digits int
 	}
-	fn := func(i trial.Input) (interface{}, error) {
-		in := i.Interface().(input)
+	fn := func(in input) (float64, error) {
 		return PreciseFloat(in.float, in.digits), nil
 	}
-	cases := trial.Cases{
+	cases := trial.Cases[input, float64]{
 		"3.45_": {
 			Input:    input{3.45678, 2},
 			Expected: 3.45,
@@ -47,11 +47,11 @@ func TestPreciseFloat(t *testing.T) {
 }
 
 func TestPrintDuration(t *testing.T) {
-	fn := func(in trial.Input) (interface{}, error) {
-		return PrintDuration(in.Interface().(time.Duration)), nil
+	fn := func(d time.Duration) (string, error) {
+		return PrintDuration(d), nil
 	}
 
-	cases := trial.Cases{
+	cases := trial.Cases[time.Duration, string]{
 		"nano": {
 			Input:    12 * time.Nanosecond,
 			Expected: "12ns",
@@ -114,4 +114,56 @@ func TestPrintDuration(t *testing.T) {
 		},
 	}
 	trial.New(fn, cases).Test(t)
+}
+
+func TestJoin(t *testing.T) {
+	fn := func(in any) (string, error) {
+		switch v := in.(type) {
+		case []int:
+			return Join(v, ","), nil
+		case []int16:
+			return Join(v, ","), nil
+		case []int32:
+			return Join(v, ","), nil
+		case []int64:
+			return Join(v, ","), nil
+		case []uint:
+			return Join(v, ","), nil
+		case []uint16:
+			return Join(v, ","), nil
+		case []uint32:
+			return Join(v, ","), nil
+		case []uint64:
+			return Join(v, ","), nil
+		case []float32:
+			return Join(v, ","), nil
+		case []float64:
+			return Join(v, ","), nil
+		default:
+			return "", fmt.Errorf("%T is not a supported type", in)
+		}
+	}
+	cases := trial.Cases[any, string]{
+		"ints": {
+			Input:    []int{1, 2, 3, 4, 5},
+			Expected: "1,2,3,4,5",
+		},
+		"int16": {
+			Input:    []int16{1, 2, 3, 4, 5},
+			Expected: "1,2,3,4,5",
+		},
+		"uint64": {
+			Input:    []uint64{1, 2, 3, 4, 5},
+			Expected: "1,2,3,4,5",
+		},
+		"float32": {
+			Input:    []float32{1.1, 1.2, 4.5},
+			Expected: "1.1,1.2,4.5",
+		},
+		"float64": {
+			Input:    []float64{1.1, 1.2, 4.5},
+			Expected: "1.1,1.2,4.5",
+		},
+	}
+	trial.New(fn, cases).SubTest(t)
 }
