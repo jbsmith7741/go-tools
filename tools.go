@@ -1,8 +1,10 @@
 package gtools
 
 import (
+	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -85,4 +87,24 @@ func fDuration(d time.Duration, precision time.Duration) string {
 		return s
 	}
 	return s + strconv.Itoa(i) // second decimal
+}
+
+type ints interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+type floats interface {
+	~float32 | ~float64
+}
+
+type numbers interface {
+	ints | floats
+}
+
+// Join like strings.Join but for any slice Type
+func Join[T numbers](elems []T, sep string) string {
+	s := make([]string, len(elems))
+	for i, v := range elems {
+		s[i] = fmt.Sprint(v)
+	}
+	return strings.Join(s, sep)
 }
