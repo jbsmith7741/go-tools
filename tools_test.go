@@ -1,6 +1,7 @@
 package gtools
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -166,4 +167,28 @@ func TestJoin(t *testing.T) {
 		},
 	}
 	trial.New(fn, cases).SubTest(t)
+}
+
+func TestDayMarshal(t *testing.T) {
+	type days struct {
+		D1 Day
+		D2 *Day
+	}
+	v := days{
+		D1: Day(trial.TimeDay("2024-01-01")),
+		D2: (*Day)(trial.TimeP("2006-01-02", "2024-02-02")),
+	}
+
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal("day marshal", err)
+	}
+	v2 := days{}
+	if err := json.Unmarshal(b, &v2); err != nil {
+		t.Log("data: ", string(b))
+		t.Fatal("day unmarshal", err)
+	}
+	if eq, diff := trial.Equal(v2, v); !eq {
+		t.Fatal("diffs: ", diff)
+	}
 }

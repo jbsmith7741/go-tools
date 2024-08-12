@@ -89,6 +89,25 @@ func fDuration(d time.Duration, precision time.Duration) string {
 	return s + strconv.Itoa(i) // second decimal
 }
 
+type Day time.Time
+
+func (d *Day) UnmarshalJSON(b []byte) error {
+	t, err := time.Parse("2006-01-02", strings.Trim(string(b), `"`))
+	if err != nil {
+		return err
+	}
+	*d = Day(t)
+	return nil
+}
+
+func (d Day) String() string {
+	return (time.Time)(d).Format("2006-01-02")
+}
+
+func (d Day) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + (time.Time)(d).Format("2006-01-02") + `"`), nil
+}
+
 type ints interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
 }
